@@ -48,6 +48,7 @@ const { globalLimiter } = require('./middlewares/rateLimiter');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const { mountSwagger } = require('./docs/swagger');
 const apiRoutes = require('./routes');
+const axios = require("axios");
 
 const app = express();
 
@@ -155,6 +156,24 @@ app.get('/docs', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok', uptimeSeconds: Math.round(process.uptime()) } });
 });
+
+const keepServerAlive = () => {
+  if (!process.env.BASE_URL) {
+    console.warn('⚠️ BASE_URL is not set. Skipping ping.')
+    return
+  }
+
+  setInterval(() => {
+    axios
+      .get(`${process.env.BASE_URL}/health`)
+      .then(() => console.log('🔄 Server active'))
+      .catch(err => console.log('⚠️ Ping failed:', err.message))
+  }, 10 * 60 * 1000)
+}
+
+keepServerAlive()
+
+
 
 /* -------------------------------------------------------------
  * 10) BOSH SAHIFA
