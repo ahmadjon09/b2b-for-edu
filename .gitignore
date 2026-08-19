@@ -14,7 +14,6 @@ npm-debug.log*
 # Vaqtinchalik fayllar
 tmp/
 temp/
-uploads/
 .DS_Store
 
 # Muharrir sozlamalari
