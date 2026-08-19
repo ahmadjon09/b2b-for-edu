@@ -1,0 +1,25 @@
+# Bog'liqliklar
+node_modules/
+
+# Muhit o'zgaruvchilari (MAXFIY - hech qachon commit qilmang!)
+.env
+.env.local
+.env.*.local
+
+# Loglar
+logs/
+*.log
+npm-debug.log*
+
+# Vaqtinchalik fayllar
+tmp/
+temp/
+uploads/
+.DS_Store
+
+# Muharrir sozlamalari
+.vscode/
+.idea/
+
+# Test/coverage
+coverage/

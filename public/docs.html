@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B2B Demo API — Junior dasturchi uchun qo'llanma</title>
+<style>
+  :root{
+    --bg:#0f1220; --panel:#171a2e; --panel2:#1e2240; --text:#e6e8f0; --muted:#9aa3c0;
+    --accent:#6c8cff; --accent2:#41d6a3; --warn:#ffb648; --danger:#ff6b6b; --line:#2a2f52;
+    --code:#0b0e1c;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.7;font-size:16px;
+  }
+  .layout{display:flex;min-height:100vh}
+
+  /* ---------- Yon menyu ---------- */
+  aside{
+    width:290px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);
+    padding:24px 18px;position:sticky;top:0;height:100vh;overflow-y:auto;
+  }
+  aside h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 0 8px}
+  aside h2:first-child{margin-top:0}
+  aside a{display:block;color:var(--text);text-decoration:none;padding:6px 10px;border-radius:8px;font-size:14.5px}
+  aside a:hover{background:var(--panel2);color:var(--accent)}
+  .brand{font-size:20px;font-weight:700;margin-bottom:4px;color:#fff}
+  .brand span{color:var(--accent)}
+  .brand-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+
+  /* ---------- Asosiy qism ---------- */
+  main{flex:1;padding:40px 48px 120px;max-width:1000px}
+  h1{font-size:34px;margin:0 0 6px;color:#fff;line-height:1.25}
+  h2.sec{font-size:26px;margin:56px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--line);color:#fff}
+  h3{font-size:19px;margin:28px 0 10px;color:var(--accent)}
+  h4{font-size:16px;margin:20px 0 8px;color:var(--accent2)}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+  a{color:var(--accent)}
+  code{background:var(--code);color:#ffd479;padding:2px 6px;border-radius:5px;font-size:14px;
+    font-family:"SF Mono",Menlo,Consolas,"Courier New",monospace}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;font-size:13.5px;line-height:1.6;
+    font-family:"SF Mono",Menlo,Consolas,"Courier New",monospace}
+  pre code{background:none;color:#d6e0ff;padding:0}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#fff;font-weight:600}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+  .note{border-left:4px solid var(--accent);background:rgba(108,140,255,.08);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0}
+  .warn{border-left:4px solid var(--warn);background:rgba(255,182,72,.08);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0}
+  .danger{border-left:4px solid var(--danger);background:rgba(255,107,107,.08);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0}
+  .ok{border-left:4px solid var(--accent2);background:rgba(65,214,163,.08);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0}
+
+  .m{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:5px;margin-right:8px;
+     font-family:monospace;letter-spacing:.04em}
+  .GET{background:#1c4b7a;color:#8fd0ff}
+  .POST{background:#1d5c3f;color:#8ef0c0}
+  .PATCH{background:#6b521a;color:#ffd479}
+  .PUT{background:#6b521a;color:#ffd479}
+  .DELETE{background:#6e2626;color:#ffa8a8}
+
+  .ep{display:flex;align-items:baseline;gap:6px;padding:9px 12px;border:1px solid var(--line);
+      border-radius:8px;margin:7px 0;background:var(--panel);flex-wrap:wrap}
+  .ep .path{font-family:monospace;font-size:14px;color:#fff}
+  .ep .desc{color:var(--muted);font-size:13.5px;margin-left:auto}
+
+  .pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;background:var(--panel2);
+        color:var(--muted);border:1px solid var(--line);margin-left:6px}
+  .pill.admin{color:#ffa8a8;border-color:#6e2626}
+  .pill.seller{color:#ffd479;border-color:#6b521a}
+  .pill.user{color:#8ef0c0;border-color:#1d5c3f}
+  .pill.public{color:#8fd0ff;border-color:#1c4b7a}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+  .hero{background:linear-gradient(135deg,#1b2150,#141830);border:1px solid var(--line);
+        border-radius:16px;padding:28px 30px;margin-bottom:10px}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .btn{display:inline-block;padding:10px 18px;border-radius:9px;background:var(--accent);color:#fff;
+       text-decoration:none;font-weight:600;font-size:14.5px}
+  .btn.alt{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+  footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+  .toc-num{color:var(--muted);font-size:12px;margin-right:6px}
+  @media(max-width:900px){
+    .layout{flex-direction:column}
+    aside{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--line)}
+    main{padding:26px 18px 80px}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ======================= YON MENYU ======================= -->
+<aside>
+  <div class="brand">B2B <span>Demo API</span></div>
+  <div class="brand-sub">Junior dasturchilar uchun qo'llanma</div>
+
+  <h2>Boshlash</h2>
+  <a href="#kirish">1. Bu nima?</a>
+  <a href="#ornatish">2. O'rnatish</a>
+  <a href="#birinchi">3. Birinchi so'rov</a>
+
+  <h2>Asoslar</h2>
+  <a href="#struktura">4. Loyiha strukturasi</a>
+  <a href="#format">5. Javob formati</a>
+  <a href="#auth">6. Autentifikatsiya</a>
+  <a href="#rollar">7. Rollar</a>
+  <a href="#pagination">8. Pagination va filtrlar</a>
+
+  <h2>Chuqurroq</h2>
+  <a href="#cache">9. Cache mexanizmi</a>
+  <a href="#audit">10. Audit log</a>
+  <a href="#xatolar">11. Xatoliklar</a>
+  <a href="#ratelimit">12. Rate limiting</a>
+  <a href="#upload">13. Rasm yuklash</a>
+
+  <h2>Ma'lumotnoma</h2>
+  <a href="#endpointlar">14. Barcha endpointlar</a>
+  <a href="#modellar">15. Ma'lumotlar modeli</a>
+  <a href="#retseptlar">16. Amaliy retseptlar</a>
+  <a href="#muammo">17. Muammolarni yechish</a>
+
+  <h2>Interaktiv</h2>
+  <a href="/api-docs" target="_blank">🧪 Swagger UI</a>
+  <a href="/api-docs.json" target="_blank">📄 OpenAPI JSON</a>
+</aside>
+
+<!-- ======================= ASOSIY ======================= -->
+<main>
+
+<div class="hero">
+  <h1>B2B Demo API — to'liq qo'llanma</h1>
+  <p style="color:var(--muted);font-size:17px;margin-top:8px">
+    Bu hujjat <b>hech narsani "o'zingiz tushunib olasiz"</b> deb qoldirmaydi. Har bir tushuncha
+    <b>nima?</b> → <b>nega kerak?</b> → <b>qanday ishlatiladi?</b> tartibida tushuntirilgan.
+    Agar siz Node.js va REST API bilan endi tanishayotgan bo'lsangiz — shu sahifani boshdan oxirigacha o'qing.
+  </p>
+  <div class="btns">
+    <a class="btn" href="/api-docs" target="_blank">Swagger UI'da sinab ko'rish</a>
+    <a class="btn alt" href="/api/v1" target="_blank">API ildizi</a>
+    <a class="btn alt" href="/api/v1/system/health" target="_blank">Server holati</a>
+  </div>
+</div>
+
+<!-- ================= 1 ================= -->
+<h2 class="sec" id="kirish"><span class="toc-num">01</span>Bu loyiha nima?</h2>
+
+<p>
+  <b>B2B</b> — <i>business to business</i>, ya'ni korxonalar bir-biriga ulgurji savdo qiladigan tizim.
+  Bu loyiha shunday savdo platformasining <b>backend</b> qismi: mahsulotlar katalogi, buyurtmalar,
+  foydalanuvchilar va rollar bilan ishlaydigan REST API.
+</p>
+
+<p>Loyiha <b>o'quv maqsadida</b> yozilgan, lekin kod haqiqiy production loyihalardagi kabi tashkil qilingan:</p>
+
+<div class="grid">
+  <div class="card">
+    <h4>🧱 Modulli struktura</h4>
+    Har bir mavzu (products, orders...) o'z papkasida: routes → controller → service → validation.
+  </div>
+  <div class="card">
+    <h4>🔐 JWT autentifikatsiya</h4>
+    Access token (15 daqiqa) + refresh token (7 kun), rollarga asoslangan ruxsatlar.
+  </div>
+  <div class="card">
+    <h4>⚡ In-memory cache</h4>
+    Ma'lumotlar RAM'da saqlanadi, DB'ga yozish fonda ketadi. Redis'siz.
+  </div>
+  <div class="card">
+    <h4>📋 Audit log</h4>
+    Har bir o'zgarish yozib boriladi, 7 kundan eskisi avtomatik o'chadi.
+  </div>
+  <div class="card">
+    <h4>🛡️ Mustahkam xatoliklar</h4>
+    Bitta markazlashgan <code>errorHandler</code>, hamma xato o'zbekcha va tushunarli.
+  </div>
+  <div class="card">
+    <h4>📚 Ikki xil hujjat</h4>
+    Interaktiv Swagger UI (<code>/api-docs</code>) va shu statik qo'llanma (<code>/docs</code>).
+  </div>
+</div>
+
+<h3>Texnologiyalar va ular nega tanlangan</h3>
+<table>
+  <tr><th>Texnologiya</th><th>Vazifasi</th><th>Nega aynan shu?</th></tr>
+  <tr><td><b>Node.js + Express</b></td><td>HTTP server, routing</td><td>Eng keng tarqalgan, o'rganish oson, misollar ko'p</td></tr>
+  <tr><td><b>PostgreSQL</b></td><td>Ma'lumotlar bazasi</td><td>Bepul, ishonchli, tranzaksiyalar va JSON'ni qo'llab-quvvatlaydi</td></tr>
+  <tr><td><b>Prisma ORM</b></td><td>DB bilan JS orqali ishlash</td><td>SQL yozmasdan, avtomatik migratsiya va tip-xavfsizlik</td></tr>
+  <tr><td><b>JWT</b></td><td>Kirish tokenlari</td><td>Serverda sessiya saqlash shart emas — API'lar uchun standart</td></tr>
+  <tr><td><b>Zod</b></td><td>Kiruvchi ma'lumot validatsiyasi</td><td>Sxema yozasiz, u tekshiradi va tipni ham o'giradi ("10" → 10)</td></tr>
+  <tr><td><b>bcryptjs</b></td><td>Parollarni hashlash</td><td>Parolni hech qachon ochiq saqlamaslik uchun</td></tr>
+  <tr><td><b>Swagger UI</b></td><td>Interaktiv hujjat</td><td>Endpointlarni brauzerdan bevosita sinash imkoni</td></tr>
+</table>
+
+<!-- ================= 2 ================= -->
+<h2 class="sec" id="ornatish"><span class="toc-num">02</span>O'rnatish va ishga tushirish</h2>
+
+<h3>Talablar</h3>
+<ul>
+  <li><b>Node.js 18+</b> — tekshirish: <code>node -v</code></li>
+  <li><b>PostgreSQL 14+</b> — tekshirish: <code>psql --version</code></li>
+</ul>
+
+<h3>1-qadam: bog'liqliklarni o'rnatish</h3>
+<pre><code>cd b2b-demo-api
+npm install</code></pre>
+
+<h3>2-qadam: bazani tayyorlash</h3>
+<p>PostgreSQL ichida foydalanuvchi va baza yarating:</p>
+<pre><code>sudo -u postgres psql -c "CREATE USER b2b WITH PASSWORD 'b2bpass' CREATEDB;"
+sudo -u postgres psql -c "CREATE DATABASE b2b_demo OWNER b2b;"</code></pre>
+
+<h3>3-qadam: <code>.env</code> faylini yaratish</h3>
+<pre><code>cp .env.example .env</code></pre>
+<p>So'ng <code>.env</code> ichidagi qiymatlarni to'g'rilang:</p>
+<pre><code>DATABASE_URL="postgresql://b2b:b2bpass@127.0.0.1:5432/b2b_demo?schema=public"
+
+# Bu ikki maxfiy kalitni ALBATTA o'zgartiring!
+# Yangi kalit yasash: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+JWT_ACCESS_SECRET=...
+JWT_REFRESH_SECRET=...
+
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+PORT=3000
+
+# Rasm yuklash uchun (ixtiyoriy — bo'sh qoldirsangiz upload o'chiq bo'ladi)
+IMGBB_API_KEY=</code></pre>
+
+<div class="danger">
+  <b>Xavfsizlik:</b> <code>.env</code> faylini hech qachon Git'ga yubormang. U <code>.gitignore</code> da bo'lishi shart.
+  Faqat <code>.env.example</code> (maxfiy qiymatlarsiz namuna) Git'da turadi.
+</div>
+
+<h3>4-qadam: migratsiya va demo ma'lumotlar</h3>
+<pre><code>npx prisma migrate dev    # jadvallarni yaratadi
+npm run seed              # demo foydalanuvchi/mahsulot/buyurtmalarni qo'shadi</code></pre>
+
+<h3>5-qadam: serverni ishga tushirish</h3>
+<pre><code>npm run dev     # nodemon bilan (kod o'zgarsa avto qayta yuklanadi)
+# yoki
+npm start       # oddiy rejim</code></pre>
+
+<div class="ok">
+  Muvaffaqiyatli ishga tushsa konsolda manzillar ro'yxati chiqadi:
+  <code>/api/v1</code>, <code>/api-docs</code>, <code>/docs</code>.
+</div>
+
+<h3>Barcha npm skriptlari</h3>
+<table>
+  <tr><th>Buyruq</th><th>Nima qiladi</th></tr>
+  <tr><td><code>npm run dev</code></td><td>Nodemon bilan ishga tushiradi (dasturlash uchun)</td></tr>
+  <tr><td><code>npm start</code></td><td>Oddiy holda ishga tushiradi (production uchun)</td></tr>
+  <tr><td><code>npm run seed</code></td><td>Demo ma'lumotlarni bazaga yozadi</td></tr>
+  <tr><td><code>npm run db:migrate</code></td><td>Yangi migratsiya yaratadi va qo'llaydi</td></tr>
+  <tr><td><code>npm run db:studio</code></td><td>Bazani brauzerda ko'rish (Prisma Studio)</td></tr>
+  <tr><td><code>npm run db:reset</code></td><td>Bazani to'liq tozalab, qaytadan yaratadi</td></tr>
+</table>
+
+<h3>Demo hisoblar (seed'dan keyin)</h3>
+<table>
+  <tr><th>Rol</th><th>Email</th><th>Parol</th></tr>
+  <tr><td><span class="pill admin">ADMIN</span></td><td><code>admin@b2b.uz</code></td><td><code>Admin123!</code></td></tr>
+  <tr><td><span class="pill seller">SELLER</span></td><td><code>seller1@b2b.uz</code></td><td><code>Parol123!</code></td></tr>
+  <tr><td><span class="pill seller">SELLER</span></td><td><code>seller2@b2b.uz</code></td><td><code>Parol123!</code></td></tr>
+  <tr><td><span class="pill user">USER</span></td><td><code>user1@b2b.uz</code></td><td><code>Parol123!</code></td></tr>
+  <tr><td><span class="pill user">USER</span></td><td><code>user2@b2b.uz</code></td><td><code>Parol123!</code></td></tr>
+</table>
+
+<!-- ================= 3 ================= -->
+<h2 class="sec" id="birinchi"><span class="toc-num">03</span>Birinchi so'rovingiz</h2>
+
+<h3>1) Ochiq (token talab qilmaydigan) so'rov</h3>
+<pre><code>curl http://localhost:3000/api/v1/products?limit=3</code></pre>
+
+<h3>2) Tizimga kirish va token olish</h3>
+<pre><code>curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@b2b.uz","password":"Admin123!"}'</code></pre>
+
+<p>Javobda ikkita token keladi:</p>
+<pre><code>{
+  "success": true,
+  "data": {
+    "user": { "id": "...", "email": "admin@b2b.uz", "role": "ADMIN" },
+    "tokens": {
+      "accessToken": "eyJhbGciOi...",   ← har bir so'rovda ishlatiladi (15 daqiqa)
+      "refreshToken": "eyJhbGciOi..."   ← faqat yangi access olish uchun (7 kun)
+    }
+  }
+}</code></pre>
+
+<h3>3) Token bilan himoyalangan so'rov</h3>
+<pre><code>TOKEN="eyJhbGciOi..."   # yuqoridagi accessToken
+
+curl http://localhost:3000/api/v1/users \
+  -H "Authorization: Bearer $TOKEN"</code></pre>
+
+<div class="note">
+  <b>Bir qatorda token olish (Linux/macOS):</b>
+  <pre style="margin-top:8px"><code>TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@b2b.uz","password":"Admin123!"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+echo $TOKEN</code></pre>
+</div>
+
+<h3>4) Swagger UI orqali (eng qulay usul)</h3>
+<ol>
+  <li><a href="/api-docs" target="_blank">/api-docs</a> ni oching</li>
+  <li><code>POST /auth/login</code> → <b>Try it out</b> → demo admin ma'lumotlarini kiriting → <b>Execute</b></li>
+  <li>Javobdan <code>accessToken</code> ni nusxalang</li>
+  <li>Yuqoridagi <b>Authorize 🔓</b> tugmasini bosing, tokenni qo'ying (faqat token, <code>Bearer</code> so'zisiz)</li>
+  <li>Endi barcha himoyalangan endpointlarni bevosita sinab ko'rishingiz mumkin</li>
+</ol>
+
+<!-- ================= 4 ================= -->
+<h2 class="sec" id="struktura"><span class="toc-num">04</span>Loyiha strukturasi</h2>
+
+<pre><code>b2b-demo-api/
+├── server.js                 ← KIRISH NUQTASI: DB→cache→job→listen
+├── prisma/
+│   ├── schema.prisma         ← ma'lumotlar modeli (jadvallar)
+│   ├── migrations/           ← SQL migratsiyalar tarixi
+│   └── seed.js               ← demo ma'lumotlar
+├── public/
+│   └── docs.html             ← siz hozir o'qiyotgan sahifa
+└── src/
+    ├── app.js                ← Express ilovasi: middleware'lar + route'lar
+    ├── routes.js             ← barcha modul router'lari bir joyda
+    ├── config/
+    │   ├── env.js            ← .env ni o'qiydi va TEKSHIRADI
+    │   ├── db.js             ← Prisma client, connect/disconnect
+    │   ├── jwt.js            ← token yaratish/tekshirish
+    │   └── imgbb.js          ← rasm yuklash servisi
+    ├── middlewares/
+    │   ├── errorHandler.js   ← MARKAZIY xato boshqaruvi
+    │   ├── auth.js           ← authenticate, requireRole
+    │   ├── validate.js       ← zod sxemasi bo'yicha tekshirish
+    │   ├── rateLimiter.js    ← so'rovlar sonini cheklash
+    │   └── requestContext.js ← har so'rovga requestId berish
+    ├── cache/
+    │   ├── cacheManager.js   ← RAM'dagi omborlar (Map)
+    │   ├── syncQueue.js      ← DB'ga fonda yozish navbati
+    │   └── warmup.js         ← start'da DB'dan cache'ni to'ldirish
+    ├── modules/
+    │   ├── auth/       ├── users/     ├── categories/
+    │   ├── products/   ├── orders/    ├── uploads/   └── system/
+    ├── audit/                ← audit log servisi va endpointlari
+    ├── jobs/                 ← fon vazifalari (eski loglarni tozalash)
+    ├── docs/                 ← Swagger/OpenAPI ta'rifi
+    └── utils/                ← logger, ApiError, response, pagination...</code></pre>
+
+<h3>Har bir modul ichidagi 4 ta fayl — nega shunday?</h3>
+<p>Masalan <code>src/modules/products/</code> ichida:</p>
+
+<table>
+  <tr><th>Fayl</th><th>Mas'uliyati</th><th>Nimani BILMAYDI</th></tr>
+  <tr>
+    <td><code>products.routes.js</code></td>
+    <td>Qaysi URL qaysi funksiyaga borishini belgilaydi + middleware zanjiri</td>
+    <td>Biznes mantiqni</td>
+  </tr>
+  <tr>
+    <td><code>products.validation.js</code></td>
+    <td>Kiruvchi ma'lumot qanday bo'lishi kerakligi (zod sxemalari)</td>
+    <td>HTTP va DB'ni</td>
+  </tr>
+  <tr>
+    <td><code>products.controller.js</code></td>
+    <td>So'rovdan ma'lumot olib service'ga uzatadi, javobni qaytaradi</td>
+    <td>DB va cache'ni</td>
+  </tr>
+  <tr>
+    <td><code>products.service.js</code></td>
+    <td>Butun biznes mantiq: cache, DB, huquq tekshiruvi, hisob-kitob</td>
+    <td>HTTP'ni (<code>req</code>/<code>res</code> ni ko'rmaydi)</td>
+  </tr>
+</table>
+
+<div class="note">
+  <b>Nega bunday bo'lish kerak?</b> Chunki har bir fayl <b>bitta ish</b> qiladi. Xato chiqsa qayerga
+  qarash kerakligini bilasiz: URL noto'g'ri → <code>routes</code>; ma'lumot rad etilyapti → <code>validation</code>;
+  natija noto'g'ri → <code>service</code>. Hammasi bitta faylda bo'lsa, 800 qatorli fayl ichidan qidirasiz.
+</div>
+
+<h3>Bitta so'rovning yo'li (boshidan oxirigacha)</h3>
+<pre><code>Client
+  │  POST /api/v1/products  { title, price, categoryId }
+  ▼
+helmet → cors → compression → express.json()     app.js
+  ▼
+requestContext        (requestId beriladi)
+  ▼
+globalLimiter         (100 so'rov/daqiqa oshdimi?)
+  ▼
+routes.js → products.routes.js
+  ▼
+writeLimiter → validate(schema) → authenticate → requireRole('SELLER','ADMIN')
+  ▼
+products.controller.create()
+  ▼
+products.service.create()
+  ├── cache.products.set(...)      ← DARHOL, RAM'ga
+  ├── syncQueue.enqueue(...)       ← DB'ga yozish FONDA
+  └── logAudit('CREATE', ...)      ← audit log
+  ▼
+sendCreated(res, product)          ← 201 javob (~2 ms)
+
+Agar biror joyda xato bo'lsa → next(error) → errorHandler → toza JSON xato</code></pre>
+
+<!-- ================= 5 ================= -->
+<h2 class="sec" id="format"><span class="toc-num">05</span>Javob formati</h2>
+
+<p>
+  API'ning <b>hamma</b> javobi bir xil ko'rinishda. Bu client tomonda kod yozishni juda osonlashtiradi:
+  siz har doim avval <code>success</code> ni tekshirasiz, tamom.
+</p>
+
+<h3>✅ Muvaffaqiyatli javob (bitta obyekt)</h3>
+<pre><code>{
+  "success": true,
+  "message": "Mahsulot yaratildi",
+  "data": { "id": "uuid...", "title": "Noutbuk", "price": 8500000 },
+  "meta": {
+    "requestId": "165ca88a-...",
+    "timestamp": "2026-08-19T17:53:04.450Z"
+  }
+}</code></pre>
+
+<h3>✅ Ro'yxat (pagination bilan)</h3>
+<pre><code>{
+  "success": true,
+  "data": [ { ... }, { ... } ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 3,
+    "totalItems": 12,
+    "limit": 5,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  },
+  "meta": { "requestId": "...", "timestamp": "..." }
+}</code></pre>
+
+<h3>❌ Xato javobi</h3>
+<pre><code>{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Kiritilgan ma'lumotlarda 1 ta xatolik bor. Quyidagi maydonlarni tekshiring",
+    "details": [
+      { "field": "name", "message": "Nom kamida 2 ta belgidan iborat bo'lsin", "in": "body" }
+    ]
+  },
+  "meta": {
+    "requestId": "dceeafe0-...",
+    "timestamp": "...",
+    "path": "/api/v1/categories",
+    "method": "POST"
+  }
+}</code></pre>
+
+<div class="note">
+  <b><code>meta.requestId</code> nima uchun kerak?</b> Bu har bir so'rovga beriladigan unikal raqam
+  (javob header'ida ham bor: <code>X-Request-Id</code>). Foydalanuvchi "menda xato chiqdi" desa,
+  shu ID ni so'raysiz va server loglaridan aynan o'sha so'rovni bir soniyada topasiz.
+  Bu production loyihalarda hayot qutqaradigan narsa.
+</div>
+
+<h3>Client tomonda ishlatish (JavaScript)</h3>
+<pre><code>const res  = await fetch('/api/v1/products?page=1&limit=10');
+const json = await res.json();
+
+if (!json.success) {
+  // Xatoni ko'rsatamiz — message allaqachon o'zbekcha va tushunarli
+  alert(json.error.message);
+  return;
+}
+
+console.log(json.data);                     // mahsulotlar massivi
+console.log(json.pagination.totalPages);    // umumiy sahifalar soni</code></pre>
+
+<!-- ================= 6 ================= -->
+<h2 class="sec" id="auth"><span class="toc-num">06</span>Autentifikatsiya (JWT)</h2>
+
+<h3>Ikki xil token — nega ikkita?</h3>
+<table>
+  <tr><th></th><th>Access token</th><th>Refresh token</th></tr>
+  <tr><td><b>Yashash muddati</b></td><td>15 daqiqa</td><td>7 kun</td></tr>
+  <tr><td><b>Vazifasi</b></td><td>Har bir so'rovda yuboriladi</td><td>Faqat yangi access olish uchun</td></tr>
+  <tr><td><b>Qayerda saqlanadi</b></td><td>Xotirada (RAM)</td><td>Xavfsiz joyda (httpOnly cookie / secure storage)</td></tr>
+  <tr><td><b>Bekor qilish mumkinmi</b></td><td>Yo'q (muddati tugaguncha amal qiladi)</td><td>Ha — bazadan o'chiriladi</td></tr>
+</table>
+
+<div class="note">
+  <b>Mantiq:</b> access token o'g'irlansa ham, u atigi 15 daqiqada yaroqsiz bo'ladi. Refresh token
+  uzoq yashaydi, lekin u <b>bazada saqlanadi</b> (aniqrog'i, uning SHA-256 hash'i) — shuning uchun
+  logout qilganda uni bekor qilish mumkin. Ikkovini birlashtirsak: qulaylik + xavfsizlik.
+</div>
+
+<h3>Amaliy oqim</h3>
+<pre><code>1. POST /auth/register  yoki  POST /auth/login
+   → { accessToken, refreshToken }
+
+2. Har bir himoyalangan so'rovda:
+   Authorization: Bearer &lt;accessToken&gt;
+
+3. 15 daqiqadan keyin 401 TOKEN_EXPIRED keladi:
+   POST /auth/refresh  { "refreshToken": "..." }
+   → yangi { accessToken, refreshToken }
+   ⚠️ Eski refresh token DARHOL bekor qilinadi (rotation)
+
+4. Chiqish:
+   POST /auth/logout  { "refreshToken": "..." }
+   → token bazadan bekor qilinadi</code></pre>
+
+<h3>Nega "token rotation"?</h3>
+<p>
+  Har safar <code>/auth/refresh</code> chaqirilganda eski refresh token bekor qilinib, <b>yangisi</b> beriladi.
+  Agar o'g'ri sizning eski tokeningizni ishlatmoqchi bo'lsa — u allaqachon yaroqsiz.
+  Bu <i>refresh token rotation</i> deb ataladi va OWASP tavsiya qiladigan amaliyot.
+</p>
+
+<h3>Parol xavfsizligi</h3>
+<ul>
+  <li>Parol <b>hech qachon</b> ochiq saqlanmaydi — faqat <code>bcrypt</code> hash'i (10 rounds).</li>
+  <li>Parol talablari: kamida 8 belgi, kamida bitta katta harf, bitta kichik harf va bitta raqam.</li>
+  <li><code>PATCH /auth/change-password</code> chaqirilsa — <b>barcha</b> refresh tokenlar bekor qilinadi,
+      ya'ni barcha qurilmalardan chiqiladi. Parol o'zgargan bo'lsa, eski sessiyalar yashamasligi kerak.</li>
+</ul>
+
+<h3>Token ichida nima bor?</h3>
+<pre><code>// accessToken payload (jwt.io da ochib ko'rishingiz mumkin)
+{
+  "sub":   "3d0e5c1b-...",   // foydalanuvchi ID
+  "email": "admin@b2b.uz",
+  "role":  "ADMIN",
+  "type":  "access",         // refresh token bilan adashtirmaslik uchun
+  "iat":   1755000000,       // qachon berilgan
+  "exp":   1755000900,       // qachon tugaydi
+  "iss":   "b2b-demo-api"    // kim bergan
+}</code></pre>
+
+<div class="warn">
+  <b>Diqqat:</b> JWT <b>shifrlanmagan</b>, faqat <i>imzolangan</i>. Ichidagi ma'lumotni har kim o'qiy oladi
+  (base64 dekodlash kifoya), lekin <b>o'zgartira olmaydi</b> — imzo buziladi.
+  Shuning uchun tokenga hech qachon parol yoki maxfiy ma'lumot solmang.
+</div>
+
+<!-- ================= 7 ================= -->
+<h2 class="sec" id="rollar"><span class="toc-num">07</span>Rollar va ruxsatlar</h2>
+
+<table>
+  <tr><th>Rol</th><th>Nima qila oladi</th></tr>
+  <tr>
+    <td><span class="pill admin">ADMIN</span></td>
+    <td>Hamma narsa: barcha mahsulot/buyurtma/foydalanuvchini ko'rish va o'zgartirish,
+        rollarni almashtirish, audit loglarni ko'rish, cache'ni boshqarish</td>
+  </tr>
+  <tr>
+    <td><span class="pill seller">SELLER</span></td>
+    <td>Mahsulot qo'shish/tahrirlash/o'chirish — <b>faqat o'zinikini</b>;
+        o'z mahsulotlari sotilgan buyurtmalarni ko'rish va ularning holatini o'zgartirish</td>
+  </tr>
+  <tr>
+    <td><span class="pill user">USER</span></td>
+    <td>Katalogni ko'rish, buyurtma berish, <b>faqat o'z</b> buyurtmalarini ko'rish,
+        o'z buyurtmasini bekor qilish, o'z profilini tahrirlash</td>
+  </tr>
+  <tr>
+    <td><span class="pill public">Mehmon</span></td>
+    <td>Tokensiz: faqat faol mahsulotlar va kategoriyalar ro'yxatini ko'rish</td>
+  </tr>
+</table>
+
+<h3>Kodda qanday amalga oshirilgan?</h3>
+<p>Ikki qatlamli himoya bor:</p>
+
+<h4>1-qatlam: route darajasida (<code>requireRole</code>)</h4>
+<pre><code>// products.routes.js
+router.post('/',
+  writeLimiter,
+  validate({ body: createProductSchema }),
+  authenticate,                        // token bormi va haqiqiymi?
+  requireRole('SELLER', 'ADMIN'),      // roli mos keladimi?
+  controller.create
+);</code></pre>
+<p>Bu "umumiy" tekshiruv: <b>USER</b> bu endpointga umuman kira olmaydi → <code>403 FORBIDDEN</code>.</p>
+
+<h4>2-qatlam: service ichida (egalik tekshiruvi)</h4>
+<pre><code>// products.service.js — update() ichida
+if (currentUser.role !== 'ADMIN' &amp;&amp; product.sellerId !== currentUser.id) {
+  throw ApiError.forbidden("Siz faqat o'zingizning mahsulotlaringizni tahrirlashingiz mumkin");
+}</code></pre>
+<p>
+  Bu "aniq" tekshiruv: SELLER endpointga kira oladi, lekin <b>boshqa sotuvchining</b> mahsulotiga tegsa —
+  baribir 403 oladi.
+</p>
+
+<div class="danger">
+  <b>Eng ko'p uchraydigan xavfsizlik xatosi:</b> faqat 1-qatlamni yozish.
+  U holda har qanday SELLER boshqa SELLER'ning mahsulotini o'chira oladi.
+  Bu <i>Broken Object Level Authorization</i> (OWASP API Top-10 dagi №1 muammo).
+  <b>Har doim ikkala qatlamni ham yozing.</b>
+</div>
+
+<h3>Buyurtma holatlari (status) va o'tishlar</h3>
+<pre><code>PENDING ──→ CONFIRMED ──→ SHIPPED ──→ DELIVERED   (yakuniy)
+   │            │            │
+   └────────────┴────────────┴──────→ CANCELLED     (yakuniy)</code></pre>
+
+<table>
+  <tr><th>Hozirgi holat</th><th>Keyin nima bo'lishi mumkin</th></tr>
+  <tr><td><code>PENDING</code> — kutilmoqda</td><td><code>CONFIRMED</code>, <code>CANCELLED</code></td></tr>
+  <tr><td><code>CONFIRMED</code> — tasdiqlangan</td><td><code>SHIPPED</code>, <code>CANCELLED</code></td></tr>
+  <tr><td><code>SHIPPED</code> — jo'natilgan</td><td><code>DELIVERED</code>, <code>CANCELLED</code></td></tr>
+  <tr><td><code>DELIVERED</code> — yetkazilgan</td><td>— (o'zgarmaydi)</td></tr>
+  <tr><td><code>CANCELLED</code> — bekor qilingan</td><td>— (o'zgarmaydi)</td></tr>
+</table>
+
+<ul>
+  <li><b>USER</b> faqat <code>CANCELLED</code> qila oladi — o'z buyurtmasini bekor qilish.</li>
+  <li><b>SELLER</b> o'z mahsuloti bor buyurtmalar holatini oldinga suradi.</li>
+  <li>Buyurtma bekor qilinsa — mahsulot zaxirasi (<code>stock</code>) avtomatik qaytariladi.</li>
+  <li>Noto'g'ri o'tishga urinsangiz <code>422 UNPROCESSABLE</code> keladi va javobda
+      <b>ruxsat etilgan holatlar ro'yxati</b> ko'rsatiladi.</li>
+</ul>
+
+<!-- ================= 8 ================= -->
+<h2 class="sec" id="pagination"><span class="toc-num">08</span>Pagination, filtrlar, saralash</h2>
+
+<h3>Umumiy parametrlar (barcha ro'yxat endpointlarida)</h3>
+<table>
+  <tr><th>Parametr</th><th>Default</th><th>Izoh</th></tr>
+  <tr><td><code>page</code></td><td>1</td><td>Sahifa raqami (1 dan boshlanadi)</td></tr>
+  <tr><td><code>limit</code></td><td>10</td><td>Sahifadagi elementlar soni. <b>Maksimum 100</b></td></tr>
+  <tr><td><code>search</code></td><td>—</td><td>Matn bo'yicha qidiruv (katta-kichik harf farqlanmaydi)</td></tr>
+  <tr><td><code>sortBy</code></td><td>createdAt</td><td>Qaysi maydon bo'yicha saralash</td></tr>
+  <tr><td><code>order</code></td><td>desc</td><td><code>asc</code> (o'sish) yoki <code>desc</code> (kamayish)</td></tr>
+</table>
+
+<div class="warn">
+  <b>Nega <code>limit</code> maksimumi 100?</b> Aks holda kimdir <code>?limit=1000000</code> yuborib
+  serverni "o'ldirishi" mumkin. Bu oddiy, lekin juda muhim himoya. 100 dan katta qiymat
+  yuborsangiz — 422 xato qaytadi.
+</div>
+
+<h3>Modullarga xos filtrlar</h3>
+
+<h4>Mahsulotlar — <code>GET /products</code></h4>
+<table>
+  <tr><th>Filtr</th><th>Misol</th></tr>
+  <tr><td><code>categoryId</code></td><td><code>?categoryId=uuid...</code></td></tr>
+  <tr><td><code>sellerId</code></td><td><code>?sellerId=uuid...</code></td></tr>
+  <tr><td><code>minPrice</code> / <code>maxPrice</code></td><td><code>?minPrice=100000&amp;maxPrice=5000000</code></td></tr>
+  <tr><td><code>inStock</code></td><td><code>?inStock=true</code> — faqat zaxirada bor mahsulotlar</td></tr>
+  <tr><td><code>isActive</code></td><td><code>?isActive=false</code> — <b>faqat ADMIN/SELLER</b> uchun</td></tr>
+  <tr><td><code>sortBy</code></td><td><code>title</code>, <code>price</code>, <code>stock</code>, <code>createdAt</code>, <code>updatedAt</code></td></tr>
+</table>
+
+<h4>Buyurtmalar — <code>GET /orders</code></h4>
+<table>
+  <tr><th>Filtr</th><th>Misol</th></tr>
+  <tr><td><code>status</code></td><td><code>?status=PENDING</code></td></tr>
+  <tr><td><code>buyerId</code></td><td><code>?buyerId=uuid...</code> (ADMIN uchun)</td></tr>
+  <tr><td><code>minTotal</code> / <code>maxTotal</code></td><td><code>?minTotal=500000</code></td></tr>
+  <tr><td><code>dateFrom</code> / <code>dateTo</code></td><td><code>?dateFrom=2026-08-01</code></td></tr>
+</table>
+
+<h3>To'liq misol</h3>
+<pre><code>GET /api/v1/products?page=2&amp;limit=5&amp;minPrice=1000000&amp;inStock=true&amp;sortBy=price&amp;order=asc&amp;search=noutbuk</code></pre>
+<p>Tarjimasi: <i>narxi 1 000 000 dan yuqori, zaxirada bor, nomida "noutbuk" bo'lgan mahsulotlarni
+   narx bo'yicha arzondan qimmatga saralab, 2-sahifadan 5 tasini ber.</i></p>
+
+<h3>Client tomonda "keyingi sahifa" tugmasi</h3>
+<pre><code>let page = 1;
+
+async function yukla() {
+  const r = await fetch(`/api/v1/products?page=${page}&amp;limit=10`);
+  const j = await r.json();
+
+  chizish(j.data);
+
+  keyingiTugma.disabled = !j.pagination.hasNextPage;
+  oldingiTugma.disabled = !j.pagination.hasPrevPage;
+  sahifaMatni.textContent = `${j.pagination.currentPage} / ${j.pagination.totalPages}`;
+}</code></pre>
+
+<!-- ================= 9 ================= -->
+<h2 class="sec" id="cache"><span class="toc-num">09</span>Cache mexanizmi (eng qiziq qism)</h2>
+
+<div class="note">
+  Bu loyihaning <b>eng o'ziga xos</b> qismi. Diqqat bilan o'qing — bu yerda tezlik va
+  ishonchlilik o'rtasidagi kelishuv (trade-off) haqida gap boradi.
+</div>
+
+<h3>Muammo</h3>
+<p>
+  Har bir <code>GET /products</code> so'rovida bazaga borish kerakmi? Baza diskda joylashgan,
+  har bir so'rov tarmoq + disk o'qishni talab qiladi. 1000 ta foydalanuvchi bir vaqtda
+  katalogni ochsa — baza 1000 marta bir xil ishni bajaradi. Bu isrof.
+</p>
+
+<h3>Yechim: ma'lumotni RAM'da saqlash</h3>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│  SERVER ISHGA TUSHGANDA (warm-up)                        │
+│                                                          │
+│  PostgreSQL ──── hammasini o'qib ────→ RAM (Map)         │
+│                                        users: Map(5)     │
+│                                        products: Map(12) │
+│                                        orders: Map(4)    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────── O'QISH (GET) ────────────┐
+│  Client → RAM'dan javob (~1 ms)     │  ← bazaga umuman bormaydi
+└─────────────────────────────────────┘
+
+┌─────────── YOZISH (POST/PATCH/DELETE) — "write-behind" ─┐
+│  1. RAM'ga yozamiz            (0.1 ms)                   │
+│  2. Clientga DARHOL javob     (~2 ms)  ✅                │
+│  3. FONDA: navbat orqali DB'ga yozamiz                   │
+│  4. DB javobidan keyin RAM'ni haqiqiy ma'lumot bilan     │
+│     yangilaymiz (masalan DB qo'ygan createdAt bilan)     │
+└──────────────────────────────────────────────────────────┘</code></pre>
+
+<h3>Natija</h3>
+<p>
+  Yuqorida ko'rgan <code>POST /categories</code> so'rovi <b>33 millisekundda</b> javob berdi,
+  holbuki DB'ga yozish keyinroq tugadi. Foydalanuvchi kutmaydi.
+</p>
+
+<h3>Xato bo'lsa nima bo'ladi? (rollback)</h3>
+<p>Bu <b>eng muhim</b> savol. Agar RAM'ga yozdik, clientga "muvaffaqiyat" dedik, lekin DB yozuvi yiqilsa?</p>
+<pre><code>syncQueue.enqueue({
+  name: 'category.create',
+  run: () =&gt; prisma.category.create({ data }),
+
+  onSuccess: (saved) =&gt; cache.categories.set(saved.id, saved),  // ✅ haqiqiy ma'lumot
+
+  onFailure: (error) =&gt; {
+    cache.categories.delete(tempId);      // ❌ RAM'dan olib tashlaymiz (rollback)
+    logAudit('DB_SYNC_FAILED', { error }); // audit logga yozamiz
+  },
+});</code></pre>
+
+<p>Bundan tashqari navbat <b>3 marta qayta uradi</b> (retry) — orasida kutish vaqti oshib boradi:</p>
+<pre><code>1-urinish yiqildi → 500 ms kutadi
+2-urinish yiqildi → 1000 ms kutadi
+3-urinish yiqildi → 2000 ms kutadi
+4-urinish ham yiqildi → rollback + DB_SYNC_FAILED audit log</code></pre>
+<p>Bu <b>eksponensial backoff</b> deyiladi: baza vaqtincha band bo'lsa, unga "nafas olish" vaqti beriladi.</p>
+
+<h3 style="color:var(--warn)">❓ Nega Redis emas?</h3>
+<div class="warn">
+  <p><b>Chunki bu o'quv loyihasi.</b> Redis'ni o'rnatish, sozlash va ishga tushirish talabani asosiy
+  mavzudan chalg'itadi. RAM'dagi oddiy <code>Map</code> bilan siz <b>cache g'oyasini</b> — invalidatsiya,
+  warm-up, write-behind, rollback — hech qanday qo'shimcha servissiz o'rganasiz.</p>
+</div>
+
+<h4>Hozirgi yechimning kamchiliklari (ochiq aytamiz)</h4>
+<table>
+  <tr><th>Muammo</th><th>Nima bo'ladi</th></tr>
+  <tr>
+    <td><b>Server o'chsa cache yo'qoladi</b></td>
+    <td>Muammo emas — qayta ishga tushganda DB'dan to'ldiriladi (warm-up). Lekin navbatda
+        turgan, hali DB'ga yozilmagan ma'lumot <b>yo'qoladi</b>. Shuning uchun bizda
+        <i>graceful shutdown</i> bor: server to'xtashdan oldin navbatni tugatadi.</td>
+  </tr>
+  <tr>
+    <td><b>Bir nechta server (horizontal scaling) ishlamaydi</b></td>
+    <td>Har bir server o'z RAM'ida ishlaydi. 1-server mahsulot qo'shsa, 2-server buni ko'rmaydi.
+        Bu eng jiddiy cheklov.</td>
+  </tr>
+  <tr>
+    <td><b>RAM cheklangan</b></td>
+    <td>Millionlab yozuv RAM'ga sig'maydi. Shuning uchun <code>CACHE_WARMUP_LIMIT</code> bor (default 5000).</td>
+  </tr>
+  <tr>
+    <td><b>TTL yo'q</b></td>
+    <td>Ma'lumot o'z-o'zidan "eskirmaydi", faqat qo'lda yangilanadi.</td>
+  </tr>
+</table>
+
+<h4>Productionda qanday bo'lishi kerak edi?</h4>
+<pre><code>┌──────────┐   ┌──────────┐   ┌──────────┐
+│ Server 1 │   │ Server 2 │   │ Server 3 │
+└────┬─────┘   └────┬─────┘   └────┬─────┘
+     └──────────────┼──────────────┘
+                    ▼
+            ┌───────────────┐
+            │     REDIS     │  ← UMUMIY cache (hamma ko'radi)
+            │  TTL, pub/sub │
+            └───────┬───────┘
+                    ▼
+            ┌───────────────┐
+            │  PostgreSQL   │
+            └───────────────┘</code></pre>
+
+<ul>
+  <li><b>Redis</b> — umumiy cache, TTL bilan (masalan mahsulotlar 5 daqiqa yashaydi).</li>
+  <li><b>Pub/Sub</b> — 1-server ma'lumotni o'zgartirsa, boshqalarga xabar beradi ("cache invalidation").</li>
+  <li><b>BullMQ</b> (Redis asosida) — navbat: server o'chsa ham vazifalar yo'qolmaydi, chunki
+      ular Redis'da (diskda) turadi. Bizning <code>syncQueue</code> esa RAM'da.</li>
+  <li><b>Muhim savol:</b> ko'p holatda write-behind umuman kerak emas. Agar to'g'ridan-to'g'ri
+      DB'ga yozish 10 ms olsa — foydalanuvchi buni sezmaydi. Write-behind faqat juda yuqori
+      yuklamada yoki DB sekin bo'lganda oqlanadi. <b>Muammo bo'lmagan joyni "optimallashtirmang".</b></li>
+</ul>
+
+<h3>Cache'ni kuzatish va boshqarish</h3>
+<pre><code># Cache statistikasi (hit rate, hajm)
+curl http://localhost:3000/api/v1/system/cache-stats -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Cache'ni DB'dan qayta to'ldirish
+curl -X POST http://localhost:3000/api/v1/system/cache-reload \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"resource":"products"}'    # yoki "all"</code></pre>
+
+<p>Javobda <code>hitRate</code> ko'rasiz — cache qanchalik samarali ishlayotganini ko'rsatadi:</p>
+<pre><code>"products": { "size": 12, "hits": 9, "misses": 0, "hitRate": "100.0%" }</code></pre>
+
+<!-- ================= 10 ================= -->
+<h2 class="sec" id="audit"><span class="toc-num">10</span>Audit log</h2>
+
+<p>
+  <b>Audit log</b> — "kim, nima qildi, qachon" degan yozuvlar jurnali. Har bir yaratish,
+  o'zgartirish va o'chirish amali qayd etiladi.
+</p>
+
+<h3>Nega kerak?</h3>
+<ul>
+  <li><b>Tekshiruv:</b> "Bu mahsulot narxini kim 10 baravar oshirdi?"</li>
+  <li><b>Xavfsizlik:</b> shubhali harakatlarni aniqlash (bir hisobdan 100 ta o'chirish).</li>
+  <li><b>Nosozliklarni tuzatish:</b> xato qachon boshlanganini vaqt bo'yicha topish.</li>
+  <li><b>Huquqiy talab:</b> ko'p sohalarda (moliya, tibbiyot) bu majburiy.</li>
+</ul>
+
+<h3>Bitta yozuv qanday ko'rinadi?</h3>
+<pre><code>{
+  "id": "ce77c8cb-...",
+  "userId": "d4aa0f03-...",
+  "action": "CREATE",
+  "entity": "Order",
+  "entityId": "37b9553c-...",
+  "meta": {
+    "ip": "127.0.0.1",
+    "userAgent": "curl/8.14.1",
+    "requestId": "7d779b5a-...",
+    "itemCount": 1,
+    "totalPrice": 960000
+  },
+  "createdAt": "2026-08-19T17:53:14.690Z",
+  "user": { "name": "Bekzod Xaridor", "email": "user1@b2b.uz", "role": "USER" }
+}</code></pre>
+
+<h3>Qanday amallar yoziladi?</h3>
+<table>
+  <tr><th>Action</th><th>Qachon</th></tr>
+  <tr><td><code>CREATE</code> / <code>UPDATE</code> / <code>DELETE</code></td><td>Har qanday ma'lumot o'zgarganda</td></tr>
+  <tr><td><code>LOGIN</code> / <code>LOGOUT</code> / <code>REGISTER</code></td><td>Autentifikatsiya amallari</td></tr>
+  <tr><td><code>REFRESH_TOKEN</code></td><td>Token yangilanganda</td></tr>
+  <tr><td><code>STATUS_CHANGE</code></td><td>Buyurtma holati o'zgarganda</td></tr>
+  <tr><td><code>UPLOAD</code></td><td>Rasm yuklanganda</td></tr>
+  <tr><td><code>DB_SYNC_FAILED</code></td><td>Cache'dan DB'ga yozish yiqilganda ⚠️</td></tr>
+  <tr><td><code>SERVER_ERROR</code></td><td>Kutilmagan 5xx xato yuz berganda ⚠️</td></tr>
+  <tr><td><code>CLEANUP</code></td><td>Eski loglar tozalanganda</td></tr>
+</table>
+
+<h3>Avtomatik tozalash</h3>
+<p>
+  Audit loglar tez o'sadi — bir yilda millionlab yozuv bo'lishi mumkin. Shuning uchun
+  <code>src/jobs/auditCleanup.job.js</code> har <b>24 soatda</b> ishlab, <b>7 kundan</b> eski
+  yozuvlarni o'chiradi. Ikkala qiymat ham <code>.env</code> dan sozlanadi:
+</p>
+<pre><code>AUDIT_LOG_RETENTION_DAYS=7        # necha kun saqlansin
+AUDIT_CLEANUP_INTERVAL_HOURS=24   # qanchada bir tozalansin</code></pre>
+
+<div class="note">
+  <b>Nega <code>setInterval</code>, cron emas?</b> Bitta serverli demo uchun bu yetarli va
+  qo'shimcha kutubxona talab qilmaydi. Productionda esa <code>node-cron</code> yoki
+  <b>tashqi cron</b> (yoki Kubernetes CronJob) afzal — chunki bir nechta server bo'lsa,
+  <code>setInterval</code> hammasida ishga tushib, bir xil ishni takrorlaydi.
+</div>
+
+<h3>Loglarni ko'rish (faqat ADMIN)</h3>
+<pre><code># Oxirgi 20 ta yozuv
+GET /api/v1/audit-logs?limit=20
+
+# Faqat o'chirishlar
+GET /api/v1/audit-logs?action=DELETE
+
+# Muayyan foydalanuvchi harakatlari
+GET /api/v1/audit-logs?userId=uuid...
+
+# Muayyan obyekt tarixi
+GET /api/v1/audit-logs?entity=Product&amp;entityId=uuid...
+
+# Sana oralig'i
+GET /api/v1/audit-logs?dateFrom=2026-08-01&amp;dateTo=2026-08-19
+
+# Umumiy statistika
+GET /api/v1/audit-logs/stats</code></pre>
+
+<!-- ================= 11 ================= -->
+<h2 class="sec" id="xatolar"><span class="toc-num">11</span>Xatoliklarni boshqarish</h2>
+
+<p>
+  Bu loyihada <b>bitta</b> joy bor — <code>src/middlewares/errorHandler.js</code> — va
+  <b>hamma</b> xato o'sha yerda tugaydi. Controller'larda <code>try/catch</code> yozilmaydi.
+</p>
+
+<h3>Qanday ishlaydi?</h3>
+<pre><code>// 1) asyncHandler har qanday async xatoni ushlab, next() ga uzatadi
+const create = asyncHandler(async (req, res) =&gt; {
+  const product = await service.create(req.body, req.user);
+  sendCreated(res, product, { message: 'Mahsulot yaratildi' });
+});
+
+// 2) Service kutilgan xatoni ochiq tashlaydi
+if (!product) {
+  throw ApiError.notFound('Mahsulot topilmadi');
+}
+
+// 3) errorHandler uni JSON'ga aylantiradi — 404 + toza xabar</code></pre>
+
+<div class="ok">
+  <b>Foyda:</b> 30 ta controller'da 30 ta <code>try/catch</code> yozish shart emas.
+  Xato formatini o'zgartirmoqchi bo'lsangiz — bitta faylni tahrirlaysiz.
+</div>
+
+<h3>Xato kodlari to'liq jadvali</h3>
+<table>
+  <tr><th>HTTP</th><th>Kod</th><th>Ma'nosi va nima qilish kerak</th></tr>
+  <tr><td>400</td><td><code>BAD_REQUEST</code></td><td>So'rov noto'g'ri tuzilgan (masalan buzuq JSON)</td></tr>
+  <tr><td>401</td><td><code>UNAUTHORIZED</code></td><td>Token yo'q yoki yaroqsiz → login qiling</td></tr>
+  <tr><td>401</td><td><code>TOKEN_EXPIRED</code></td><td>Access token muddati tugadi → <code>/auth/refresh</code></td></tr>
+  <tr><td>403</td><td><code>FORBIDDEN</code></td><td>Token bor, lekin ruxsat yo'q → rolni tekshiring</td></tr>
+  <tr><td>404</td><td><code>NOT_FOUND</code></td><td>Obyekt yoki endpoint topilmadi → ID/URL ni tekshiring</td></tr>
+  <tr><td>409</td><td><code>CONFLICT</code></td><td>Ziddiyat: masalan bu email allaqachon ro'yxatdan o'tgan</td></tr>
+  <tr><td>413</td><td><code>PAYLOAD_TOO_LARGE</code></td><td>Fayl yoki JSON juda katta</td></tr>
+  <tr><td>415</td><td><code>UNSUPPORTED_MEDIA_TYPE</code></td><td>Fayl turi qo'llab-quvvatlanmaydi</td></tr>
+  <tr><td>422</td><td><code>VALIDATION_ERROR</code></td><td>Maydonlar noto'g'ri → <code>error.details</code> ga qarang</td></tr>
+  <tr><td>422</td><td><code>UNPROCESSABLE</code></td><td>Ma'lumot to'g'ri, lekin biznes qoidasi buzilgan (masalan zaxira yetmaydi)</td></tr>
+  <tr><td>429</td><td><code>TOO_MANY_REQUESTS</code></td><td>Juda ko'p so'rov → biroz kuting</td></tr>
+  <tr><td>500</td><td><code>INTERNAL_ERROR</code></td><td>Serverdagi kutilmagan xato → loglarni ko'ring</td></tr>
+  <tr><td>503</td><td><code>SERVICE_UNAVAILABLE</code></td><td>Baza yoki tashqi servis javob bermayapti</td></tr>
+</table>
+
+<h3>Chalkashtiradigan juftliklar</h3>
+
+<h4>401 va 403 — farqi nima?</h4>
+<ul>
+  <li><b>401</b> = "Siz kimsiz? Tanimadim." → token yo'q, buzuq yoki muddati o'tgan.</li>
+  <li><b>403</b> = "Sizni tanidim, lekin ruxsat yo'q." → token yaxshi, rol mos emas.</li>
+</ul>
+
+<h4>400 va 422 — farqi nima?</h4>
+<ul>
+  <li><b>400</b> = so'rovning <i>shakli</i> buzuq (JSON parse bo'lmadi).</li>
+  <li><b>422</b> = shakl to'g'ri, lekin <i>mazmuni</i> qoidaga to'g'ri kelmaydi (narx manfiy son).</li>
+</ul>
+
+<h3>Prisma xatolari avtomatik tarjima qilinadi</h3>
+<table>
+  <tr><th>Prisma kodi</th><th>→ HTTP</th><th>Ma'nosi</th></tr>
+  <tr><td><code>P2002</code></td><td>409</td><td>Unikal maydon takrorlandi (email band)</td></tr>
+  <tr><td><code>P2003</code></td><td>400</td><td>Tashqi kalit xatosi (mavjud bo'lmagan categoryId)</td></tr>
+  <tr><td><code>P2025</code></td><td>404</td><td>Yozuv topilmadi</td></tr>
+  <tr><td><code>P1001</code> / <code>P1002</code></td><td>503</td><td>Bazaga ulanib bo'lmadi</td></tr>
+</table>
+
+<div class="note">
+  Foydalanuvchi hech qachon <code>"Unique constraint failed on the fields: (email)"</code> degan
+  texnik matnni ko'rmaydi. Uning o'rniga: <b>"Bu email allaqachon ro'yxatdan o'tgan"</b>.
+</div>
+
+<h3>Production'da stack trace ko'rsatilmaydi</h3>
+<ul>
+  <li><code>NODE_ENV=development</code> → xato javobida <code>error.stack</code> ham bo'ladi (tuzatish uchun qulay).</li>
+  <li><code>NODE_ENV=production</code> → stack yashiriladi. 500 xatoda esa umumiy xabar beriladi:
+      <i>"Serverda kutilmagan xatolik yuz berdi"</i>.</li>
+</ul>
+<p><b>Nega?</b> Stack trace fayl yo'llari, kutubxona versiyalari va kod tuzilishini oshkor qiladi —
+   bu hujumchi uchun qimmatli ma'lumot.</p>
+
+<h3>Process darajasidagi himoya</h3>
+<pre><code>unhandledRejection  → log qilinadi, server ishlashda davom etadi
+uncaughtException   → log qilinadi, server XAVFSIZ to'xtatiladi
+SIGINT / SIGTERM    → graceful shutdown:
+                        1. yangi so'rovlar qabul qilinmaydi
+                        2. syncQueue.drain() — navbat DB'ga yoziladi
+                        3. job to'xtatiladi, DB ulanishi yopiladi</code></pre>
+
+<div class="warn">
+  <b>Nega <code>uncaughtException</code> da server to'xtatiladi?</b>
+  Chunki bunday xatodan keyin dastur holati ishonchsiz bo'lib qoladi — xotirada yarim bajarilgan
+  operatsiyalar qolishi mumkin. To'g'ri yechim: tozalab chiqish va qayta ishga tushish
+  (productionda buni PM2 yoki Docker avtomatik qiladi).
+</div>
+
+<!-- ================= 12 ================= -->
+<h2 class="sec" id="ratelimit"><span class="toc-num">12</span>Rate limiting</h2>
+
+<p>So'rovlar soni cheklanadi — bu API'ni suiiste'mol va DDoS'dan himoya qiladi.</p>
+
+<table>
+  <tr><th>Limiter</th><th>Cheklov</th><th>Qayerda</th></tr>
+  <tr><td><b>globalLimiter</b></td><td>100 so'rov / daqiqa</td><td>Barcha <code>/api/*</code> so'rovlari</td></tr>
+  <tr><td><b>authLimiter</b></td><td>5 so'rov / daqiqa</td><td>login, register, refresh</td></tr>
+  <tr><td><b>writeLimiter</b></td><td>50 so'rov / daqiqa</td><td>POST/PATCH/DELETE</td></tr>
+  <tr><td><b>uploadLimiter</b></td><td>10 so'rov / daqiqa</td><td>Rasm yuklash</td></tr>
+</table>
+
+<h3>Limit kaliti: IP yoki foydalanuvchi</h3>
+<pre><code>function keyGenerator(req) {
+  if (req.user?.id) return `user:${req.user.id}`;  // tizimga kirgan bo'lsa
+  return `ip:${req.ip}`;                            // mehmon bo'lsa
+}</code></pre>
+<p>
+  <b>Nega shunday?</b> Agar faqat IP bo'yicha cheklasak, bitta ofisdagi (bir xil IP) 50 ta xodim
+  bir-birining limitini "yeb" qo'yadi. Token bo'lsa — har kim o'z limitiga ega.
+</p>
+
+<h3><code>authLimiter</code> ning nozik jihati</h3>
+<pre><code>skipSuccessfulRequests: true</code></pre>
+<p>
+  Faqat <b>muvaffaqiyatsiz</b> loginlar sanaladi. Ya'ni parolni to'g'ri kiritsangiz — limit
+  ishlatilmaydi. Bu <i>brute-force</i> hujumini to'sadi, lekin oddiy foydalanuvchiga xalaqit bermaydi.
+</p>
+
+<h3>Javob header'lari</h3>
+<pre><code>RateLimit-Limit: 100        # umumiy limit
+RateLimit-Remaining: 87     # qolgan so'rovlar
+RateLimit-Reset: 42         # necha soniyadan keyin yangilanadi</code></pre>
+
+<p>Limit oshsa <code>429</code> qaytadi:</p>
+<pre><code>{
+  "success": false,
+  "error": {
+    "code": "TOO_MANY_REQUESTS",
+    "message": "Juda ko'p so'rov yubordingiz. Iltimos, 60 soniyadan keyin qayta urinib ko'ring",
+    "details": { "limit": 5, "windowMs": 60000, "retryAfterSeconds": 60 }
+  }
+}</code></pre>
+
+<div class="warn">
+  <b>Production eslatmasi:</b> hozirgi limiter hisoblagichni <b>RAM'da</b> saqlaydi. Bir nechta
+  server bo'lsa, har biri alohida sanaydi va haqiqiy limit N barobar oshib ketadi.
+  Yechim: <code>rate-limit-redis</code> — umumiy hisoblagich.
+</div>
+
+<!-- ================= 13 ================= -->
+<h2 class="sec" id="upload"><span class="toc-num">13</span>Rasm yuklash (imgbb)</h2>
+
+<h3>Nega imgbb, o'z serveringizga emas?</h3>
+<ul>
+  <li>Serverda fayl saqlash — disk to'ladi, backup murakkablashadi.</li>
+  <li>Bir nechta server bo'lsa, 1-serverga yuklangan rasm 2-serverda topilmaydi.</li>
+  <li>Rasmlarni tarqatish uchun CDN kerak.</li>
+</ul>
+<p>
+  Shuning uchun rasm <b>tashqi servisga</b> yuboriladi va bazaga faqat <b>URL</b> saqlanadi.
+  Productionda odatda AWS S3 / Cloudinary ishlatiladi; bu yerda bepul <b>imgbb.com</b> tanlangan.
+</p>
+
+<h3>Sozlash</h3>
+<ol>
+  <li><a href="https://api.imgbb.com/" target="_blank">api.imgbb.com</a> dan bepul API kalit oling</li>
+  <li><code>.env</code> ga yozing: <code>IMGBB_API_KEY=sizning_kalitingiz</code></li>
+  <li>Serverni qayta ishga tushiring</li>
+</ol>
+
+<div class="note">
+  Kalit bo'lmasa API buzilmaydi — shunchaki upload endpointlari <code>503</code> qaytaradi.
+  Holatni tekshirish: <code>GET /api/v1/uploads/info</code>
+</div>
+
+<h3>Cheklovlar</h3>
+<table>
+  <tr><td>Maksimal hajm</td><td>5 MB (<code>MAX_UPLOAD_SIZE_BYTES</code>)</td></tr>
+  <tr><td>Ruxsat etilgan turlar</td><td>jpeg, png, gif, webp, bmp</td></tr>
+  <tr><td>Bir vaqtda</td><td>1 ta (<code>/image</code>) yoki 5 tagacha (<code>/images</code>)</td></tr>
+</table>
+
+<h3>Misol</h3>
+<pre><code>curl -X POST http://localhost:3000/api/v1/uploads/image \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "image=@rasm.jpg"</code></pre>
+
+<pre><code>{
+  "success": true,
+  "data": {
+    "url": "https://i.ibb.co/xxxx/rasm.jpg",
+    "thumbUrl": "https://i.ibb.co/xxxx/rasm-thumb.jpg",
+    "deleteUrl": "https://ibb.co/delete/yyyy",
+    "size": 245310
+  }
+}</code></pre>
+
+<p>So'ng bu URL'ni mahsulotga biriktirasiz:</p>
+<pre><code>PATCH /api/v1/products/&lt;id&gt;
+{ "imageUrl": "https://i.ibb.co/xxxx/rasm.jpg" }</code></pre>
+
+<div class="warn">
+  <b>Xavfsizlik:</b> fayl turi faqat kengaytma bo'yicha emas, <b>MIME-type</b> bo'yicha tekshiriladi.
+  Aks holda kimdir <code>virus.exe</code> ni <code>rasm.jpg</code> deb nomlab yuborishi mumkin edi.
+</div>
+
+<!-- ================= 14 ================= -->
+<h2 class="sec" id="endpointlar"><span class="toc-num">14</span>Barcha endpointlar</h2>
+
+<p>Umumiy prefiks: <code>/api/v1</code>. Interaktiv sinash uchun: <a href="/api-docs" target="_blank">/api-docs</a></p>
+
+<h3>🔐 Auth</h3>
+<div class="ep"><span class="m POST">POST</span><span class="path">/auth/register</span><span class="pill public">ochiq</span><span class="desc">Ro'yxatdan o'tish (USER yoki SELLER)</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/auth/login</span><span class="pill public">ochiq</span><span class="desc">Kirish, tokenlar olish</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/auth/refresh</span><span class="pill public">ochiq</span><span class="desc">Access tokenni yangilash</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/auth/logout</span><span class="desc">Refresh tokenni bekor qilish</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/auth/me</span><span class="desc">O'z profilim</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/auth/change-password</span><span class="desc">Parolni almashtirish (barcha sessiyalar yopiladi)</span></div>
+
+<h3>📁 Categories</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/categories</span><span class="pill public">ochiq</span><span class="desc">Ro'yxat (pagination, search)</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/categories/:id</span><span class="pill public">ochiq</span><span class="desc">Bittasi</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/categories</span><span class="pill admin">ADMIN</span><span class="desc">Yaratish</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/categories/:id</span><span class="pill admin">ADMIN</span><span class="desc">Tahrirlash</span></div>
+<div class="ep"><span class="m DELETE">DELETE</span><span class="path">/categories/:id</span><span class="pill admin">ADMIN</span><span class="desc">O'chirish (mahsuloti bo'lsa — 409)</span></div>
+
+<h3>📦 Products</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/products</span><span class="pill public">ochiq</span><span class="desc">Ro'yxat + barcha filtrlar</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/products/:id</span><span class="pill public">ochiq</span><span class="desc">Bittasi</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/products/my/list</span><span class="pill seller">SELLER</span><span class="desc">O'z mahsulotlarim</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/products</span><span class="pill seller">SELLER</span><span class="pill admin">ADMIN</span><span class="desc">Yaratish</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/products/:id</span><span class="pill seller">egasi</span><span class="pill admin">ADMIN</span><span class="desc">Tahrirlash</span></div>
+<div class="ep"><span class="m DELETE">DELETE</span><span class="path">/products/:id</span><span class="pill seller">egasi</span><span class="pill admin">ADMIN</span><span class="desc">O'chirish</span></div>
+
+<h3>🛒 Orders</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/orders</span><span class="desc">Ro'yxat (rolga qarab filtrlanadi)</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/orders/my</span><span class="desc">Mening buyurtmalarim</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/orders/stats</span><span class="desc">Statistika (jami, holatlar bo'yicha, tushum)</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/orders/:id</span><span class="desc">Bittasi (faqat egasi/sotuvchi/admin)</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/orders</span><span class="desc">Buyurtma berish (zaxira tekshiriladi)</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/orders/:id/status</span><span class="desc">Holatni o'zgartirish</span></div>
+<div class="ep"><span class="m DELETE">DELETE</span><span class="path">/orders/:id</span><span class="pill admin">ADMIN</span><span class="desc">O'chirish (faqat CANCELLED bo'lsa)</span></div>
+
+<h3>👤 Users</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/users</span><span class="pill admin">ADMIN</span><span class="desc">Ro'yxat + statistika</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/users/:id</span><span class="pill admin">ADMIN</span><span class="pill user">o'zi</span><span class="desc">Bittasi</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/users/:id</span><span class="pill admin">ADMIN</span><span class="pill user">o'zi</span><span class="desc">Profilni tahrirlash</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/users/:id/role</span><span class="pill admin">ADMIN</span><span class="desc">Rolni o'zgartirish</span></div>
+<div class="ep"><span class="m PATCH">PATCH</span><span class="path">/users/:id/status</span><span class="pill admin">ADMIN</span><span class="desc">Bloklash / faollashtirish</span></div>
+<div class="ep"><span class="m DELETE">DELETE</span><span class="path">/users/:id</span><span class="pill admin">ADMIN</span><span class="desc">O'chirish</span></div>
+
+<h3>🖼 Uploads</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/uploads/info</span><span class="pill public">ochiq</span><span class="desc">Cheklovlar va holat</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/uploads/image</span><span class="desc">Bitta rasm</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/uploads/images</span><span class="desc">5 tagacha rasm</span></div>
+
+<h3>📋 Audit</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/audit-logs</span><span class="pill admin">ADMIN</span><span class="desc">Loglar (pagination + filtrlar)</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/audit-logs/stats</span><span class="pill admin">ADMIN</span><span class="desc">Statistika</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/audit-logs/actions</span><span class="pill admin">ADMIN</span><span class="desc">Mavjud action turlari</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/audit-logs/cleanup</span><span class="pill admin">ADMIN</span><span class="desc">Eski loglarni qo'lda tozalash</span></div>
+
+<h3>⚙️ System</h3>
+<div class="ep"><span class="m GET">GET</span><span class="path">/system/health</span><span class="pill public">ochiq</span><span class="desc">DB, cache, navbat, xotira holati</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/system/cache-stats</span><span class="pill admin">ADMIN</span><span class="desc">Cache statistikasi (hit rate)</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/system/cache-reload</span><span class="pill admin">ADMIN</span><span class="desc">Cache'ni DB'dan qayta to'ldirish</span></div>
+
+<!-- ================= 15 ================= -->
+<h2 class="sec" id="modellar"><span class="toc-num">15</span>Ma'lumotlar modeli</h2>
+
+<pre><code>User ──&lt; Product &gt;── Category
+ │           │
+ │           │
+ └──&lt; Order ─┴─&lt; OrderItem
+ │
+ └──&lt; AuditLog
+ │
+ └──&lt; RefreshToken</code></pre>
+
+<h3>User</h3>
+<table>
+  <tr><th>Maydon</th><th>Tur</th><th>Izoh</th></tr>
+  <tr><td><code>id</code></td><td>uuid</td><td>Asosiy kalit</td></tr>
+  <tr><td><code>email</code></td><td>string</td><td>Unikal</td></tr>
+  <tr><td><code>name</code></td><td>string</td><td>To'liq ism</td></tr>
+  <tr><td><code>passwordHash</code></td><td>string</td><td>bcrypt hash — <b>API javobida hech qachon qaytmaydi</b></td></tr>
+  <tr><td><code>role</code></td><td>enum</td><td>ADMIN | SELLER | USER</td></tr>
+  <tr><td><code>avatarUrl</code></td><td>string?</td><td>Rasm havolasi</td></tr>
+  <tr><td><code>isActive</code></td><td>bool</td><td>false bo'lsa — kira olmaydi (403)</td></tr>
+</table>
+
+<h3>Product</h3>
+<table>
+  <tr><th>Maydon</th><th>Tur</th><th>Izoh</th></tr>
+  <tr><td><code>title</code></td><td>string</td><td>Nomi</td></tr>
+  <tr><td><code>price</code></td><td>Decimal(12,2)</td><td>Narx — <b>float emas!</b></td></tr>
+  <tr><td><code>stock</code></td><td>int</td><td>Zaxira miqdori</td></tr>
+  <tr><td><code>isActive</code></td><td>bool</td><td>false — katalogda ko'rinmaydi</td></tr>
+  <tr><td><code>categoryId</code></td><td>uuid</td><td>Kategoriya</td></tr>
+  <tr><td><code>sellerId</code></td><td>uuid</td><td>Sotuvchi</td></tr>
+</table>
+
+<div class="warn">
+  <b>Nega narx uchun <code>Decimal</code>, <code>Float</code> emas?</b><br>
+  JavaScript'da <code>0.1 + 0.2 === 0.30000000000000004</code>. Pul bilan ishlaganda bunday
+  yaxlitlash xatolari yig'ilib, hisob-kitobni buzadi. <code>Decimal</code> aniq o'nlik sonlar bilan
+  ishlaydi. <b>Qoida: pulni hech qachon float'da saqlamang.</b>
+</div>
+
+<h3>Order va OrderItem</h3>
+<table>
+  <tr><th>Maydon</th><th>Izoh</th></tr>
+  <tr><td><code>Order.buyerId</code></td><td>Kim buyurtma bergan</td></tr>
+  <tr><td><code>Order.status</code></td><td>PENDING | CONFIRMED | SHIPPED | DELIVERED | CANCELLED</td></tr>
+  <tr><td><code>Order.totalPrice</code></td><td>Umumiy summa (item'lardan hisoblanadi)</td></tr>
+  <tr><td><code>OrderItem.quantity</code></td><td>Nechta dona</td></tr>
+  <tr><td><code>OrderItem.priceAtOrder</code></td><td><b>Buyurtma paytidagi narx</b></td></tr>
+  <tr><td><code>OrderItem.sellerId</code></td><td>Sotuvchi (o'z sotuvlarini tez topishi uchun)</td></tr>
+</table>
+
+<div class="note">
+  <b>Nega <code>priceAtOrder</code> alohida saqlanadi?</b>
+  Ertaga sotuvchi mahsulot narxini oshirsa, kechagi buyurtma summasi <b>o'zgarmasligi kerak</b>.
+  Agar narxni har safar <code>Product</code> dan olsak, eski cheklar "o'z-o'zidan" o'zgarib ketardi.
+  Bu <i>snapshot</i> naqshi — moliyaviy ma'lumotlarda majburiy.
+</div>
+
+<h3>AuditLog</h3>
+<table>
+  <tr><td><code>action</code></td><td>CREATE, UPDATE, DELETE, LOGIN...</td></tr>
+  <tr><td><code>entity</code></td><td>Product, Order, User...</td></tr>
+  <tr><td><code>entityId</code></td><td>Qaysi obyekt</td></tr>
+  <tr><td><code>meta</code></td><td><b>JSON</b> — ip, userAgent, requestId, o'zgargan maydonlar</td></tr>
+</table>
+
+<!-- ================= 16 ================= -->
+<h2 class="sec" id="retseptlar"><span class="toc-num">16</span>Amaliy retseptlar</h2>
+
+<h3>Retsept 1: To'liq savdo sikli</h3>
+<pre><code>BASE=http://localhost:3000/api/v1
+
+# 1) Admin sifatida kirish
+ADMIN=$(curl -s -X POST $BASE/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"admin@b2b.uz","password":"Admin123!"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 2) Kategoriya yaratish
+CAT=$(curl -s -X POST $BASE/categories -H "Authorization: Bearer $ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Yangi kategoriya","description":"Sinov"}' \
+  | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
+
+# 3) Sotuvchi sifatida kirish
+SELLER=$(curl -s -X POST $BASE/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"seller1@b2b.uz","password":"Parol123!"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 4) Mahsulot qo'shish
+PROD=$(curl -s -X POST $BASE/products -H "Authorization: Bearer $SELLER" \
+  -H "Content-Type: application/json" \
+  -d "{\"title\":\"Sinov mahsuloti\",\"price\":150000,\"stock\":20,\"categoryId\":\"$CAT\"}" \
+  | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
+
+# 5) Xaridor sifatida kirish va buyurtma berish
+USER=$(curl -s -X POST $BASE/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"user1@b2b.uz","password":"Parol123!"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+ORDER=$(curl -s -X POST $BASE/orders -H "Authorization: Bearer $USER" \
+  -H "Content-Type: application/json" \
+  -d "{\"items\":[{\"productId\":\"$PROD\",\"quantity\":3}],\"note\":\"Tez yetkazing\"}" \
+  | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
+
+# 6) Sotuvchi buyurtmani tasdiqlaydi
+curl -s -X PATCH $BASE/orders/$ORDER/status -H "Authorization: Bearer $SELLER" \
+  -H "Content-Type: application/json" -d '{"status":"CONFIRMED"}'
+
+# 7) Audit logda hammasi ko'rinadi
+curl -s "$BASE/audit-logs?limit=10" -H "Authorization: Bearer $ADMIN"</code></pre>
+
+<h3>Retsept 2: Frontend'dan foydalanish (fetch wrapper)</h3>
+<pre><code>const API = 'http://localhost:3000/api/v1';
+
+let accessToken  = localStorage.getItem('accessToken');
+let refreshToken = localStorage.getItem('refreshToken');
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken &amp;&amp; { Authorization: `Bearer ${accessToken}` }),
+      ...options.headers,
+    },
+  });
+
+  const json = await res.json();
+
+  // Token muddati tugagan bo'lsa — yangilab, so'rovni QAYTA yuboramiz
+  if (json.error?.code === 'TOKEN_EXPIRED' &amp;&amp; refreshToken) {
+    const ok = await yangilash();
+    if (ok) return apiFetch(path, options);
+  }
+
+  if (!json.success) throw new Error(json.error.message);
+  return json;
+}
+
+async function yangilash() {
+  const res  = await fetch(`${API}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  const json = await res.json();
+  if (!json.success) { chiqish(); return false; }
+
+  accessToken  = json.data.tokens.accessToken;
+  refreshToken = json.data.tokens.refreshToken;
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
+  return true;
+}
+
+function chiqish() {
+  accessToken = refreshToken = null;
+  localStorage.clear();
+  location.href = '/login';
+}
+
+// Ishlatish:
+const { data, pagination } = await apiFetch('/products?page=1&amp;limit=10');</code></pre>
+
+<h3>Retsept 3: Yangi modul qo'shish (masalan "reviews")</h3>
+<ol>
+  <li><code>prisma/schema.prisma</code> ga <code>model Review</code> qo'shing → <code>npx prisma migrate dev --name add_reviews</code></li>
+  <li><code>src/modules/reviews/</code> papkasini yarating va 4 ta fayl yozing:
+    <code>reviews.validation.js</code> → <code>reviews.service.js</code> → <code>reviews.controller.js</code> → <code>reviews.routes.js</code></li>
+  <li><code>src/routes.js</code> ga qo'shing: <code>router.use('/reviews', reviewsRoutes)</code></li>
+  <li>Cache kerak bo'lsa: <code>src/cache/cacheManager.js</code> ga yangi <code>CacheStore</code>
+      va <code>warmup.js</code> ga yuklash logikasini qo'shing</li>
+  <li>Hujjat uchun <code>src/docs/paths.*.js</code> ga path'larni yozing</li>
+</ol>
+<p><b>Maslahat:</b> <code>categories</code> modulini nusxalab boshlang — u eng sodda va to'liq namuna.</p>
+
+<!-- ================= 17 ================= -->
+<h2 class="sec" id="muammo"><span class="toc-num">17</span>Muammolarni yechish</h2>
+
+<h3>❌ <code>Can't reach database server at 127.0.0.1:5432</code></h3>
+<pre><code>sudo service postgresql start          # yoki: brew services start postgresql
+psql -h 127.0.0.1 -U b2b -d b2b_demo   # ulanishni tekshirish</code></pre>
+<p><code>.env</code> dagi <code>DATABASE_URL</code> ni ham tekshiring — parol va baza nomi to'g'rimi?</p>
+
+<h3>❌ <code>EADDRINUSE: address already in use :::3000</code></h3>
+<pre><code>lsof -i :3000        # kim band qilgan?
+kill -9 &lt;PID&gt;        # to'xtatish
+# yoki .env da: PORT=3001</code></pre>
+
+<h3>❌ <code>JWT_ACCESS_SECRET is required</code> (server ishga tushmayapti)</h3>
+<p><code>.env</code> fayli yo'q yoki to'liq emas:</p>
+<pre><code>cp .env.example .env
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"  # kalit yasash</code></pre>
+
+<h3>❌ <code>@prisma/client did not initialize yet</code></h3>
+<pre><code>npx prisma generate</code></pre>
+<p><code>schema.prisma</code> ni o'zgartirgandan keyin bu buyruqni <b>har doim</b> bajaring.</p>
+
+<h3>❌ 401 kelyapti, token esa bor</h3>
+<ul>
+  <li>Header formati to'g'rimi? <code>Authorization: Bearer &lt;token&gt;</code> — <code>Bearer</code> so'zi va bitta bo'sh joy shart.</li>
+  <li>Token 15 daqiqada eskiradi → <code>/auth/refresh</code> chaqiring.</li>
+  <li>Swagger'da: <b>Authorize</b> oynasiga faqat tokenning o'zini qo'ying, <code>Bearer</code> yozmang.</li>
+  <li><code>.env</code> dagi <code>JWT_ACCESS_SECRET</code> o'zgargan bo'lsa — eski tokenlar yaroqsiz bo'ladi.</li>
+</ul>
+
+<h3>❌ 429 Too Many Requests</h3>
+<p>Limitga yetdingiz. Bir daqiqa kuting yoki dasturlash vaqtida <code>.env</code> da oshiring:</p>
+<pre><code>RATE_LIMIT_MAX=1000
+AUTH_RATE_LIMIT_MAX=100</code></pre>
+
+<h3>❌ Ma'lumot yaratdim, lekin bazada yo'q</h3>
+<p>Cache write-behind ishlatadi — DB yozuvi bir necha millisekund keyin bo'ladi. Tekshiring:</p>
+<pre><code>curl $BASE/system/health -s | grep -o '"syncQueue":{[^}]*}'
+curl $BASE/audit-logs?action=DB_SYNC_FAILED -H "Authorization: Bearer $ADMIN"</code></pre>
+<p>Agar <code>DB_SYNC_FAILED</code> yozuvi bo'lsa — DB yozuvi 3 marta urinib ham yiqilgan
+   va cache <b>rollback</b> qilingan.</p>
+
+<h3>❌ Swagger UI ochilmayapti / bo'sh</h3>
+<ul>
+  <li>Brauzer konsolini oching — CSP xatosi bormi? <code>app.js</code> da
+      <code>contentSecurityPolicy: false</code> bo'lishi kerak.</li>
+  <li>To'g'ridan-to'g'ri JSON'ni tekshiring: <a href="/api-docs.json" target="_blank">/api-docs.json</a></li>
+</ul>
+
+<h3>🔍 Umumiy diagnostika</h3>
+<pre><code># Server tirikmi va hamma qism sog'lommi?
+curl http://localhost:3000/api/v1/system/health
+
+# Javob:
+{
+  "database": { "connected": true, "latencyMs": 1 },
+  "cache":    { "warmedUp": true, "products": 12 },
+  "syncQueue":{ "pending": 0, "failed": 0 },
+  "memory":   { "heapUsedMb": 19.8 }
+}</code></pre>
+
+<footer>
+  <p>
+    <b>B2B Demo API</b> — o'quv loyihasi. Kod izohlari va hujjatlar o'zbek tilida.<br>
+    Interaktiv hujjat: <a href="/api-docs">/api-docs</a> &nbsp;·&nbsp;
+    OpenAPI JSON: <a href="/api-docs.json">/api-docs.json</a> &nbsp;·&nbsp;
+    Server holati: <a href="/api/v1/system/health">/api/v1/system/health</a>
+  </p>
+  <p style="color:var(--muted);font-size:13px;margin-top:14px">
+    Savolingiz bormi? Avval <a href="#muammo">17-bo'lim</a> ni ko'ring, so'ng
+    <code>src/</code> ichidagi kod izohlarini o'qing — har bir fayl boshida uning
+    mas'uliyati va "nega shunday" izohi yozilgan.
+  </p>
+</footer>
+
+</main>
+</div>
+</body>
+</html>

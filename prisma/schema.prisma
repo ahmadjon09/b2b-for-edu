@@ -1,0 +1,182 @@
+// =============================================================
+// Prisma schema — B2B Demo API
+// -------------------------------------------------------------
+// Bu fayl butun ma'lumotlar bazasi strukturasini (jadvallar,
+// ustunlar, bog'lanishlar) tavsiflaydi. Prisma shu fayl asosida:
+//   1) SQL migratsiya fayllarini generatsiya qiladi
+//   2) TypeScript/JS uchun tayyor DB-klient (PrismaClient) yaratadi
+//
+// Buyruqlar:
+//   npx prisma migrate dev --name init   -> migratsiya yaratish
+//   npx prisma generate                  -> klientni qayta generatsiya
+//   npx prisma studio                    -> brauzerda DB ko'rish
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+// ENUM'lar — cheklangan qiymatlar to'plami.
+// DB darajasida noto'g'ri qiymat yozib bo'lmaydi.
+// -------------------------------------------------------------
+
+/// Foydalanuvchi rollari.
+/// ADMIN  - hamma narsani ko'radi va boshqaradi
+/// SELLER - sotuvchi, faqat o'z mahsulotlari va ularga tushgan buyurtmalar
+/// USER   - oddiy xaridor, faqat o'z buyurtmalari
+enum Role {
+  ADMIN
+  SELLER
+  USER
+}
+
+/// Buyurtma holatlari (status mashinasi).
+/// PENDING -> CONFIRMED -> SHIPPED -> DELIVERED
+/// Istalgan bosqichda CANCELLED bo'lishi mumkin (DELIVERED'dan keyin emas).
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// -------------------------------------------------------------
+// MODELLAR
+// -------------------------------------------------------------
+
+/// Foydalanuvchi. Parol hech qachon ochiq saqlanmaydi —
+/// faqat bcrypt hash ko'rinishida (passwordHash).
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Bog'lanishlar (relations)
+  products      Product[]      @relation("SellerProducts")
+  orders        Order[]        @relation("BuyerOrders")
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+
+  @@index([role])
+  @@index([email])
+}
+
+/// Refresh tokenlar DB'da saqlanadi — shunda logout qilganda
+/// tokenni "bekor qilish" (revoke) imkoni bo'ladi.
+/// Faqat token hash'i saqlanadi, tokenning o'zi emas.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Mahsulot kategoriyasi.
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+}
+
+/// Mahsulot. Har bir mahsulot bitta sotuvchiga (seller) va
+/// bitta kategoriyaga tegishli.
+model Product {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  price       Decimal  @db.Decimal(12, 2)
+  stock       Int      @default(0)
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  categoryId  String
+  sellerId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  seller     User        @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([title])
+}
+
+/// Buyurtma (order). Xaridor (buyer) bir nechta mahsulotni
+/// bitta buyurtmada sotib oladi -> OrderItem lar orqali.
+model Order {
+  id         String      @id @default(uuid())
+  buyerId    String
+  status     OrderStatus @default(PENDING)
+  totalPrice Decimal     @db.Decimal(12, 2) @default(0)
+  note       String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  buyer User        @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  @@index([buyerId])
+  @@index([status])
+}
+
+/// Buyurtma tarkibidagi bitta qator: qaysi mahsulot, nechta dona,
+/// va buyurtma paytidagi narx (priceAtOrder).
+/// Narx nusxa qilib saqlanadi, chunki keyinchalik mahsulot narxi
+/// o'zgarsa ham eski buyurtma summasi o'zgarmasligi kerak.
+model OrderItem {
+  id           String  @id @default(uuid())
+  orderId      String
+  productId    String
+  sellerId     String
+  quantity     Int
+  priceAtOrder Decimal @db.Decimal(12, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([sellerId])
+}
+
+/// Audit log — kim, nima qildi, qachon.
+/// Faqat oxirgi N kun (default 7) saqlanadi, eskilari job orqali o'chiriladi.
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String   // CREATE | UPDATE | DELETE | LOGIN | DB_SYNC_FAILED ...
+  entity    String   // Product | Order | User | Category ...
+  entityId  String?
+  meta      Json?    // qo'shimcha ma'lumot (ip, o'zgargan maydonlar, xato matni)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([entity, entityId])
+}
