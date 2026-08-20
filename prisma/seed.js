@@ -112,19 +112,45 @@ async function main() {
    * ---------------------------------------------------------- */
   step('Mahsulotlar yaratilmoqda...');
 
+  /* --------------------------------------------------------------
+   * MAHSULOT RASMLARI HAQIDA
+   * --------------------------------------------------------------
+   * Har bir demo mahsulot uchun OQ FONLI, professional "product shot"
+   * rasm tanlangan va loyihaning ichiga joylangan:
+   *
+   *     public/images/products/01-noutbuk.jpg  ...  12-guruch.jpg
+   *
+   * Nega tashqi (internetdagi) URL emas, balki lokal fayl?
+   *   1) Ko'p stock-saytlar "hotlink" himoyasiga ega — boshqa domendan
+   *      so'ralganda rasm o'rniga 403 Forbidden qaytaradi.
+   *   2) Tashqi havola istalgan kuni o'lishi mumkin, demo esa har doim
+   *      ishlashi kerak.
+   *   3) Rasmlar `public/` ichida bo'lgani uchun Express ularni
+   *      `/static/...` yo'li orqali avtomatik tarqatadi (src/app.js).
+   *
+   * `env.baseUrl` = APP_BASE_URL yoki `http://localhost:<PORT>`.
+   * Shuning uchun DB'da TO'LIQ (absolute) URL saqlanadi va frontend uni
+   * to'g'ridan-to'g'ri `<img src="...">` ichiga qo'ya oladi.
+   *
+   * PRODUCTIONDA: rasmlar odatda S3 / Cloudinary / imgbb kabi tashqi
+   * obyekt-omborda saqlanadi. Bu loyihada `POST /api/v1/uploads/image`
+   * endpointi imgbb.com bilan ishlaydi (IMGBB_API_KEY berilsa).
+   * -------------------------------------------------------------- */
+  const img = (fileName) => `${env.baseUrl}/static/images/products/${fileName}`;
+
   const productsData = [
-    { title: 'Noutbuk Lenovo ThinkPad E14', price: 8500000, stock: 12, category: 'Elektronika', seller: seller1 },
-    { title: 'Smartfon Samsung Galaxy A55', price: 4200000, stock: 30, category: 'Elektronika', seller: seller1 },
-    { title: 'Monitor LG 27" IPS', price: 2750000, stock: 18, category: 'Elektronika', seller: seller2 },
-    { title: 'Simsiz sichqoncha Logitech M330', price: 210000, stock: 120, category: 'Elektronika', seller: seller2 },
-    { title: 'Muzlatgich Artel HD-345', price: 5600000, stock: 8, category: 'Maishiy texnika', seller: seller1 },
-    { title: 'Kir yuvish mashinasi Samsung 7kg', price: 4900000, stock: 6, category: 'Maishiy texnika', seller: seller2 },
-    { title: 'Ofis stoli 140x70', price: 1350000, stock: 25, category: 'Ofis jihozlari', seller: seller1 },
-    { title: 'Ergonomik ofis kresli', price: 1890000, stock: 15, category: 'Ofis jihozlari', seller: seller2 },
-    { title: 'A4 qog\'oz, 500 varaq (quti)', price: 62000, stock: 400, category: 'Ofis jihozlari', seller: seller1 },
-    { title: 'Sement M400, 50 kg', price: 55000, stock: 1000, category: 'Qurilish mollari', seller: seller2 },
-    { title: 'Akkumulyatorli shurupovert Bosch', price: 1150000, stock: 22, category: 'Qurilish mollari', seller: seller1 },
-    { title: 'Guruch Lazer, 25 kg qop', price: 480000, stock: 60, category: 'Oziq-ovqat', seller: seller2 },
+    { title: 'Noutbuk Lenovo ThinkPad E14', price: 8500000, stock: 12, category: 'Elektronika', seller: seller1, image: '01-noutbuk.jpg' },
+    { title: 'Smartfon Samsung Galaxy A55', price: 4200000, stock: 30, category: 'Elektronika', seller: seller1, image: '02-smartfon.jpg' },
+    { title: 'Monitor LG 27\" IPS', price: 2750000, stock: 18, category: 'Elektronika', seller: seller2, image: '03-monitor.jpg' },
+    { title: 'Simsiz sichqoncha Logitech M330', price: 210000, stock: 120, category: 'Elektronika', seller: seller2, image: '04-sichqoncha.jpg' },
+    { title: 'Muzlatgich Artel HD-345', price: 5600000, stock: 8, category: 'Maishiy texnika', seller: seller1, image: '05-muzlatgich.jpg' },
+    { title: 'Kir yuvish mashinasi Samsung 7kg', price: 4900000, stock: 6, category: 'Maishiy texnika', seller: seller2, image: '06-kir-yuvish-mashinasi.jpg' },
+    { title: 'Ofis stoli 140x70', price: 1350000, stock: 25, category: 'Ofis jihozlari', seller: seller1, image: '07-ofis-stoli.jpg' },
+    { title: 'Ergonomik ofis kresli', price: 1890000, stock: 15, category: 'Ofis jihozlari', seller: seller2, image: '08-ofis-kreslosi.jpg' },
+    { title: 'A4 qog\'oz, 500 varaq (quti)', price: 62000, stock: 400, category: 'Ofis jihozlari', seller: seller1, image: '09-a4-qogoz.jpg' },
+    { title: 'Sement M400, 50 kg', price: 55000, stock: 1000, category: 'Qurilish mollari', seller: seller2, image: '10-sement.jpg' },
+    { title: 'Akkumulyatorli shurupovert Bosch', price: 1150000, stock: 22, category: 'Qurilish mollari', seller: seller1, image: '11-shurupovert.jpg' },
+    { title: 'Guruch Lazer, 25 kg qop', price: 480000, stock: 60, category: 'Oziq-ovqat', seller: seller2, image: '12-guruch.jpg' },
   ];
 
   const products = [];
@@ -138,6 +164,7 @@ async function main() {
       stock: p.stock,
       categoryId: categories[p.category].id,
       sellerId: p.seller.id,
+      imageUrl: img(p.image), // oq fonli demo rasm (public/images/products/)
       isActive: true,
     };
 

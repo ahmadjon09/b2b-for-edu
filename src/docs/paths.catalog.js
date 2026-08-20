@@ -235,7 +235,7 @@ module.exports = {
     },
   },
 
-  '/products/my/list': {
+  '/products/my': {
     get: {
       tags: ['Products'],
       summary: "Sotuvchining o'z mahsulotlari (SELLER/ADMIN)",

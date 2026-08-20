@@ -53,6 +53,7 @@
   th{background:var(--panel2);color:#fff;font-weight:600}
   tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 
+  .muted{color:var(--muted)}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
   .note{border-left:4px solid var(--accent);background:rgba(108,140,255,.08);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0}
   .warn{border-left:4px solid var(--warn);background:rgba(255,182,72,.08);padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0}
@@ -760,6 +761,209 @@ async function yukla() {
 4-urinish ham yiqildi → rollback + DB_SYNC_FAILED audit log</code></pre>
 <p>Bu <b>eksponensial backoff</b> deyiladi: baza vaqtincha band bo'lsa, unga "nafas olish" vaqti beriladi.</p>
 
+<h3>🔄 Cache qachon yangilanadi? — uchta yo'l</h3>
+
+<p>
+  Bu eng ko'p savol tug'diradigan joy. Cache — bu DB'ning <b>nusxasi</b>. Nusxa
+  bo'lgan joyda doim bitta muammo bor: <b>asl nusxa o'zgarib, nusxa eskirib qolishi</b>.
+  Buni ingliz tilida <i>cache drift</i> (cache'ning oqib ketishi) deyishadi.
+</p>
+
+<p>
+  Loyihada bu muammo <b>uchta yo'l</b> bilan yechilgan. Ular bir-birini
+  almashtirmaydi — <b>uchalasi bir vaqtda ishlaydi</b>, chunki har biri boshqa
+  turdagi holatni ushlaydi.
+</p>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Yo'l</th><th>Qachon ishlaydi</th><th>Kim ishga tushiradi</th><th>Kechikish</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>A</b></td>
+      <td>Hodisa asosida<br><span class="muted">(event-driven)</span></td>
+      <td>Har <code>POST</code> / <code>PATCH</code> / <code>DELETE</code> da</td>
+      <td>Kodning o'zi</td>
+      <td><b>0 ms</b> — darhol</td>
+    </tr>
+    <tr>
+      <td><b>B</b></td>
+      <td>Qo'lda<br><span class="muted">(manual)</span></td>
+      <td>ADMIN so'raganda</td>
+      <td>Odam</td>
+      <td>so'rov paytida</td>
+    </tr>
+    <tr>
+      <td><b>C</b></td>
+      <td>Davriy<br><span class="muted">(scheduled job)</span></td>
+      <td>Har <b>5 daqiqada</b></td>
+      <td>Fon job'i</td>
+      <td>maks. <b>5 daqiqa</b></td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>A — hodisa asosida (avtomatik, darhol)</h4>
+<p>
+  Bu asosiy yo'l. API orqali mahsulot yaratilsa — <code>cache.products.set(...)</code>,
+  o'zgarsa — <code>update(...)</code>, o'chirilsa — <code>delete(...)</code>.
+  Kodi: <code>src/modules/*/*.service.js</code>. Yuqorida ko'rgan write-behind
+  sxemasi ayni shu.
+</p>
+<p class="muted">
+  Kamchiligi: bu yo'l faqat <b>shu server orqali o'tgan</b> o'zgarishlarni biladi.
+</p>
+
+<h4>B — qo'lda (ADMIN tugmasi)</h4>
+<pre><code># 1-variant: warm-up'ni to'g'ridan-to'g'ri chaqirish.
+#            Bitta resursni ham yangilay oladi.
+curl -X POST http://localhost:3000/api/v1/system/cache-reload \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"resource":"products"}'   # "all" | "users" | "categories" | "orders"
+
+# 2-variant: DAVRIY job'ning aynan o'zini "hozir ishga tushir".
+#            Ya'ni "5 daqiqa kutmayman" tugmasi.
+curl -X POST http://localhost:3000/api/v1/system/cache-refresh-now \
+  -H "Authorization: Bearer $ADMIN_TOKEN"</code></pre>
+
+<div class="note">
+  <b>Ikkalasining farqi nima?</b><br>
+  <code>/cache-reload</code> — warm-up funksiyasini <b>to'g'ridan-to'g'ri</b>
+  chaqiradi, bitta resursni ham yangilay oladi.<br>
+  <code>/cache-refresh-now</code> — <b>davriy job'ni turtadi</b>: uning qulfi
+  (bir vaqtda ikkita yangilanish ketmasligi) va statistika hisoblagichlari ham
+  ishlaydi. Agar ayni damda yangilanish ketayotgan bo'lsa, javobda
+  <code>refreshed: false, reason: "BUSY"</code> keladi — <b>bu xato emas</b>,
+  shunchaki "hozir band" degani.
+</div>
+
+<p class="muted">
+  Ikkalasi ham avval <code>syncQueue.drain(10000)</code> chaqiradi — ya'ni
+  navbatdagi DB yozuvlari tugashini kutadi. Aks holda hali DB'ga yetib
+  bormagan yangi ma'lumotni <b>eski qiymat bilan qayta yozib yuborardik</b>.
+</p>
+
+<h4>C — davriy: har 5 daqiqada (avtomatik)</h4>
+<p>
+  Fayl: <code>src/jobs/cacheRefresh.job.js</code>. Server ishga tushganda
+  yoqiladi va <code>setInterval</code> orqali har
+  <code>CACHE_REFRESH_INTERVAL_MINUTES</code> (default <b>5</b>) daqiqada
+  to'liq <code>warmUpCache()</code> bajaradi.
+</p>
+
+<p><b>Nega A yetarli emas?</b> Cache DB'dan quyidagi hollarda ajralib qoladi —
+va A bularning <u>hech birini</u> ko'rmaydi:</p>
+<ol>
+  <li>Kimdir DB'ga to'g'ridan-to'g'ri SQL yozsa (<code>psql</code>, DBeaver, migratsiya skripti).</li>
+  <li>Boshqa servis yoki cron shu bazaga yozsa.</li>
+  <li><code>syncQueue</code> 3 marta urinib ham yiqilsa va rollback qilsa — nozik holatlarda farq qolishi mumkin.</li>
+  <li>Bir nechta server nusxasi ishlatilsa — biri yozadi, ikkinchisi bilmaydi.</li>
+</ol>
+
+<p>
+  C ana shu holatlarni har 5 daqiqada tuzatib turadi. Ya'ni <b>eng yomon
+  holatda ham ma'lumot 5 daqiqadan ortiq eskirmaydi</b>.
+</p>
+
+<h4>Job'ni o'z ko'zingiz bilan ko'rish (tajriba)</h4>
+<p>Buni sinab ko'ring — cache nima ekanini bir marta va butunlay tushunasiz:</p>
+<pre><code># 1) Serverni 1 daqiqalik interval bilan ishga tushiring
+CACHE_REFRESH_INTERVAL_MINUTES=1 npm run dev
+
+# 2) API'ni CHETLAB O'TIB, to'g'ridan-to'g'ri DB'da narxni o'zgartiring
+psql -U b2b -d b2b_demo \
+  -c "UPDATE \"Product\" SET price = 99999999 WHERE title LIKE 'Noutbuk%';"
+
+# 3) Darhol API'dan so'rang — ESKI narx keladi! Cache DB'ni bilmaydi.
+curl "http://localhost:3000/api/v1/products?search=ThinkPad"
+#    -> "price": 8500000     (eski)
+
+# 4) 1 daqiqa kuting va yana so'rang — YANGI narx keladi.
+curl "http://localhost:3000/api/v1/products?search=ThinkPad"
+#    -> "price": 99999999    (job yangiladi!)</code></pre>
+
+<p>Log'da shu paytda quyidagini ko'rasiz:</p>
+<pre><code>[19:38:27] CACHE   Cache davriy yangilanmoqda (trigger: auto)...
+[19:38:27] CACHE   "products" cache to'ldirildi: 12 ta yozuv
+[19:38:27] OK      Cache davriy yangilandi (8ms) — users=5, categories=5, products=12, ...</code></pre>
+
+<h4>Job holatini kuzatish</h4>
+<pre><code>curl http://localhost:3000/api/v1/system/cache-stats \
+  -H "Authorization: Bearer $ADMIN_TOKEN"</code></pre>
+
+<p>Javobning <code>autoRefresh</code> bo'limi:</p>
+<pre><code>{
+  "enabled": true,             // job yoqilganmi
+  "intervalMinutes": 5,        // qanchada bir ishlaydi
+  "runCount": 12,              // necha marta ishga tushdi
+  "successCount": 12,          // nechtasi muvaffaqiyatli
+  "failureCount": 0,           // nechtasi xato bergan
+  "skippedCount": 0,           // "band" bo'lgani uchun o'tkazib yuborilgan
+  "lastRunAt":     "2026-08-19T19:38:27.711Z",
+  "lastSuccessAt": "2026-08-19T19:38:27.719Z",
+  "lastDurationMs": 8,         // oxirgisi necha ms davom etdi
+  "lastError": null,           // oxirgi xato matni
+  "nextRunAt":     "2026-08-19T19:43:27.719Z",
+  "isRunningNow": false        // hozir ishlayaptimi
+}</code></pre>
+
+<p><b>Nima ustidan kuzatish kerak?</b></p>
+<ul>
+  <li><code>failureCount</code> o'sib borsa — DB bilan muammo bor, <code>lastError</code> ni o'qing.</li>
+  <li><code>skippedCount</code> o'sib borsa — yangilanish intervaldan uzoqroq davom etyapti,
+      ya'ni <code>CACHE_REFRESH_INTERVAL_MINUTES</code> ni oshirish yoki
+      <code>CACHE_WARMUP_LIMIT</code> ni kamaytirish kerak.</li>
+  <li><code>lastDurationMs</code> sezilarli o'ssa — jadvallar kattalashib ketgan,
+      warm-up'ni to'liq emas, "faqat o'zgarganlarini" yuklaydigan qilish vaqti keldi.</li>
+</ul>
+
+<h4>Job kodidagi 4 ta muhim detal</h4>
+<ol>
+  <li>
+    <b>Hech qachon <code>throw</code> qilmaydi.</b> Fon job'idagi ushlanmagan
+    xato (unhandled rejection) butun Node jarayonini o'ldirishi mumkin. Shuning
+    uchun job ichida hamma narsa <code>try/catch</code> da: DB yiqilsa xato
+    yozib qo'yiladi, <b>eski cache saqlanib qoladi</b> va API ishlashda davom etadi.
+    Eski ma'lumot — <b>hech qanday ma'lumotdan yaxshiroq</b>.
+  </li>
+  <li>
+    <b>Qulf (<code>isRunning</code>) bor.</b> Agar oldingi yangilanish hali
+    tugamagan bo'lsa (DB sekin), yangisi ishga tushmaydi —
+    <code>skippedCount</code> oshadi. Aks holda sekin DB'da yangilanishlar
+    ustma-ust tushib, holat yanada yomonlashardi.
+  </li>
+  <li>
+    <b><code>intervalHandle.unref()</code></b> chaqirilgan. Bu Node'ga
+    "shu taymer tufayli jarayonni tirik ushlab turma" deydi — aks holda
+    <code>Ctrl+C</code> dan keyin ham dastur o'chmasligi mumkin.
+  </li>
+  <li>
+    <b>Graceful shutdown'da to'xtatiladi</b> — <code>server.js</code> da
+    <code>stopCacheRefreshJob()</code> chaqiriladi, shunda server o'chayotganda
+    yarim yo'lda qolgan yangilanish bo'lmaydi.
+  </li>
+</ol>
+
+<div class="note">
+  <b>O'chirish kerak bo'lsa:</b> <code>.env</code> da
+  <code>CACHE_REFRESH_INTERVAL_MINUTES=0</code> qiling. U holda <b>A</b> va
+  <b>B</b> yo'llari ishlashda davom etadi, faqat davriy yangilanish o'chadi.
+  Server log'ida ogohlantirish chiqadi.
+</div>
+
+<div class="warn">
+  <b>Productionda bu qanday bo'lardi?</b> <code>setInterval</code> bitta jarayon
+  uchun mukammal, lekin 3 ta nusxa (pod/instance) ishlayotganda uchalasi ham
+  bir vaqtda DB'ni to'liq o'qiydi — bu behuda yuk. To'g'ri yechimlar:
+  <ul>
+    <li><b>Redis Pub/Sub</b> — biri o'zgartirsa, qolganlariga xabar yuboradi. Davriy to'liq o'qish umuman kerak bo'lmaydi.</li>
+    <li><b>node-cron</b> yoki <b>BullMQ repeatable job</b> — vazifani faqat bitta "yetakchi" nusxa bajaradi.</li>
+    <li><b>Kubernetes CronJob</b> — jadval butunlay ilovadan tashqarida boshqariladi.</li>
+  </ul>
+</div>
+
 <h3 style="color:var(--warn)">❓ Nega Redis emas?</h3>
 <div class="warn">
   <p><b>Chunki bu o'quv loyihasi.</b> Redis'ni o'rnatish, sozlash va ishga tushirish talabani asosiy
@@ -1139,7 +1343,7 @@ RateLimit-Reset: 42         # necha soniyadan keyin yangilanadi</code></pre>
 <h3>📦 Products</h3>
 <div class="ep"><span class="m GET">GET</span><span class="path">/products</span><span class="pill public">ochiq</span><span class="desc">Ro'yxat + barcha filtrlar</span></div>
 <div class="ep"><span class="m GET">GET</span><span class="path">/products/:id</span><span class="pill public">ochiq</span><span class="desc">Bittasi</span></div>
-<div class="ep"><span class="m GET">GET</span><span class="path">/products/my/list</span><span class="pill seller">SELLER</span><span class="desc">O'z mahsulotlarim</span></div>
+<div class="ep"><span class="m GET">GET</span><span class="path">/products/my</span><span class="pill seller">SELLER</span><span class="desc">O'z mahsulotlarim</span></div>
 <div class="ep"><span class="m POST">POST</span><span class="path">/products</span><span class="pill seller">SELLER</span><span class="pill admin">ADMIN</span><span class="desc">Yaratish</span></div>
 <div class="ep"><span class="m PATCH">PATCH</span><span class="path">/products/:id</span><span class="pill seller">egasi</span><span class="pill admin">ADMIN</span><span class="desc">Tahrirlash</span></div>
 <div class="ep"><span class="m DELETE">DELETE</span><span class="path">/products/:id</span><span class="pill seller">egasi</span><span class="pill admin">ADMIN</span><span class="desc">O'chirish</span></div>
@@ -1176,6 +1380,7 @@ RateLimit-Reset: 42         # necha soniyadan keyin yangilanadi</code></pre>
 <div class="ep"><span class="m GET">GET</span><span class="path">/system/health</span><span class="pill public">ochiq</span><span class="desc">DB, cache, navbat, xotira holati</span></div>
 <div class="ep"><span class="m GET">GET</span><span class="path">/system/cache-stats</span><span class="pill admin">ADMIN</span><span class="desc">Cache statistikasi (hit rate)</span></div>
 <div class="ep"><span class="m POST">POST</span><span class="path">/system/cache-reload</span><span class="pill admin">ADMIN</span><span class="desc">Cache'ni DB'dan qayta to'ldirish</span></div>
+<div class="ep"><span class="m POST">POST</span><span class="path">/system/cache-refresh-now</span><span class="pill admin">ADMIN</span><span class="desc">Davriy yangilash job'ini hoziroq ishga tushirish</span></div>
 
 <!-- ================= 15 ================= -->
 <h2 class="sec" id="modellar"><span class="toc-num">15</span>Ma'lumotlar modeli</h2>

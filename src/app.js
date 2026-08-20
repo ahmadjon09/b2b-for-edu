@@ -49,7 +49,6 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const { mountSwagger } = require('./docs/swagger');
 const apiRoutes = require('./routes');
 const axios = require("axios");
-
 const app = express();
 
 /* -------------------------------------------------------------
@@ -157,6 +156,7 @@ app.get('/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok', uptimeSeconds: Math.round(process.uptime()) } });
 });
 
+
 const keepServerAlive = () => {
   if (!process.env.BASE_URL) {
     console.warn('⚠️ BASE_URL is not set. Skipping ping.')
@@ -172,8 +172,6 @@ const keepServerAlive = () => {
 }
 
 keepServerAlive()
-
-
 
 /* -------------------------------------------------------------
  * 10) BOSH SAHIFA

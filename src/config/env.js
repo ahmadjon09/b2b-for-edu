@@ -78,12 +78,23 @@ const envSchema = z.object({
 
   // --- Cache / sync ---
   CACHE_WARMUP_LIMIT: intFromString(5000, { min: 1 }),
+  // Cache'ni DB bilan avtomatik sinxronlash oralig'i (daqiqada).
+  // `0` -> avtomatik yangilash o'chadi (faqat CRUD hodisalari va
+  // ADMIN'ning qo'lda `POST /api/v1/system/cache-reload` chaqiruvi qoladi).
+  // Batafsil: src/jobs/cacheRefresh.job.js
+  CACHE_REFRESH_INTERVAL_MINUTES: intFromString(5, { min: 0, max: 24 * 60 }),
   SYNC_MAX_RETRIES: intFromString(3, { min: 1, max: 10 }),
   SYNC_RETRY_BASE_DELAY_MS: intFromString(500, { min: 10 }),
 
   // --- Seed ---
   SEED_ADMIN_EMAIL: z.string().email().default('admin@b2b.uz'),
   SEED_ADMIN_PASSWORD: z.string().min(6).default('Admin123!'),
+
+  // --- Statik fayllar / rasmlar ---
+  // Lokal demo rasmlar uchun to'liq URL yasashda ishlatiladi.
+  // Bo'sh qoldirilsa, PORT asosida "http://localhost:<PORT>" hisoblanadi.
+  // Productionda: APP_BASE_URL=https://api.sizningdomen.uz
+  APP_BASE_URL: z.string().optional().default(''),
 
   // --- Boshqa ---
   TRUST_PROXY: boolFromString(true),
@@ -113,5 +124,9 @@ env.isProd = env.NODE_ENV === 'production';
 env.isDev = env.NODE_ENV === 'development';
 env.isTest = env.NODE_ENV === 'test';
 env.imgbbEnabled = Boolean(env.IMGBB_API_KEY);
+
+// Rasm URL'larini yasash uchun ildiz manzil.
+// Oxiridagi "/" ni olib tashlaymiz, chunki keyin biz o'zimiz qo'shamiz.
+env.baseUrl = (env.BASE_URL || `http://localhost:${env.PORT}`).replace(/\/+$/, '');
 
 module.exports = env;

@@ -27,9 +27,18 @@ const schemas = require('./products.validation');
 
 const router = express.Router();
 
-// --- Sotuvchining o'z mahsulotlari (/:id dan OLDIN turishi shart) ---
+// --- Sotuvchining o'z mahsulotlari ---
+//
+// DIQQAT (juniorlar uchun eng ko'p uchraydigan xato):
+// Bu route '/:id' dan OLDIN turishi SHART. Express route'larni
+// yozilgan tartibda tekshiradi. Agar '/:id' oldinroq bo'lsa,
+// '/my' so'rovi unga tushib ketadi va id="my" deb o'qiladi —
+// natijada "UUID bo'lishi kerak" degan 422 xato chiqadi.
+//
+// Ikkala yozuv ham qabul qilinadi: '/my' va '/my/list'.
+// (orders moduli '/my' ishlatadi — API bir xil bo'lishi uchun.)
 router.get(
-  '/my/list',
+  ['/my', '/my/list'],
   authenticate,
   requireRole('SELLER', 'ADMIN'),
   validate({ query: schemas.listProductsSchema }),

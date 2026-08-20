@@ -567,6 +567,10 @@ module.exports = {
       summary: 'Cache statistikasi (ADMIN)',
       description:
         "Har bir ombordagi yozuvlar soni, hit/miss nisbati va sinxronizatsiya navbati holati. " +
+        "Javobdagi `autoRefresh` bo'limi — cache'ni har " +
+        "`CACHE_REFRESH_INTERVAL_MINUTES` daqiqada (default 5) DB bilan " +
+        "tenglashtiruvchi fon job'ining holati: yoqilgan/o'chirilgan, oxirgi " +
+        "muvaffaqiyatli yangilanish vaqti, keyingi yangilanish vaqti, xatolar soni. " +
         "Cache mexanizmi qanday ishlayotganini kuzatish uchun juda foydali.",
       responses: {
         200: ok('Statistika', { type: 'object' }),
@@ -602,6 +606,36 @@ module.exports = {
       responses: {
         200: ok('Qayta yuklandi', { type: 'object' }),
         403: { $ref: '#/components/responses/Forbidden' },
+      },
+    },
+  },
+
+  '/system/cache-refresh-now': {
+    post: {
+      tags: ['System'],
+      summary: "Avtomatik yangilash job'ini hoziroq ishga tushirish (ADMIN)",
+      description:
+        "Cache DB bilan uch yo'l orqali sinxron turadi:\n\n" +
+        "1. **Hodisa asosida** — mahsulot/buyurtma yaratilganda, o'zgarganda yoki " +
+        "o'chirilganda cache darhol yangilanadi (avtomatik, kod ichida).\n" +
+        "2. **Qo'lda** — ADMIN `POST /system/cache-reload` yoki shu endpointni chaqiradi.\n" +
+        "3. **Davriy** — fon job'i har `CACHE_REFRESH_INTERVAL_MINUTES` daqiqada " +
+        "(default: **5 daqiqa**) to'liq warm-up qiladi.\n\n" +
+        "**Bu endpoint `/system/cache-reload` dan nimasi bilan farq qiladi?** " +
+        "`cache-reload` warm-up funksiyasini to'g'ridan-to'g'ri chaqiradi va bitta " +
+        "resursni ham yangilay oladi. `cache-refresh-now` esa AYNAN davriy job'ning " +
+        "o'zini turtadi: uning \"bir vaqtda ikkita yangilanish bo'lmasin\" qulfi va " +
+        "statistika hisoblagichlari ham ishlaydi. Ya'ni bu — \"5 daqiqa kutmayman, " +
+        "hozir yangila\" tugmasi.\n\n" +
+        "Agar ayni damda boshqa yangilanish ketayotgan bo'lsa, javobda " +
+        "`refreshed: false, reason: \"BUSY\"` qaytadi — bu xato emas, oddiy holat.",
+      responses: {
+        200: ok('Yangilandi (yoki BUSY sababli o\'tkazib yuborildi)', { type: 'object' }),
+        403: { $ref: '#/components/responses/Forbidden' },
+        503: {
+          description: "Yangilash amalga oshmadi (DB javob bermadi). Eski cache saqlanib qoldi.",
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+        },
       },
     },
   },

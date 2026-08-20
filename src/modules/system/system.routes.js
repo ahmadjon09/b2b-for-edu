@@ -19,6 +19,7 @@ const { prisma } = require('../../config/db');
 const cache = require('../../cache/cacheManager');
 const syncQueue = require('../../cache/syncQueue');
 const { warmUpCache, reloadResource } = require('../../cache/warmup');
+const { getCacheRefreshStats, runCacheRefreshOnce } = require('../../jobs/cacheRefresh.job');
 const asyncHandler = require('../../utils/asyncHandler');
 const validate = require('../../middlewares/validate');
 const { sendSuccess } = require('../../utils/response');
@@ -86,10 +87,15 @@ router.get(
       stores: cache.getAllStats(),
       syncQueue: syncQueue.getStats(),
       isReady: cache.isReady(),
+      // Avtomatik (davriy) yangilash job'ining holati.
+      // Manba: src/jobs/cacheRefresh.job.js
+      autoRefresh: getCacheRefreshStats(),
       explanation:
         "`hits` — cache'dan topilgan so'rovlar, `misses` — topilmay DB'ga borilganlar. " +
         "`queue.pending` — DB'ga yozilishini kutayotgan amallar soni. " +
-        "Agar `pending` doim o'sib borsa — DB sekin ishlayapti yoki xato bermoqda.",
+        "Agar `pending` doim o'sib borsa — DB sekin ishlayapti yoki xato bermoqda. " +
+        "`autoRefresh` — cache'ni har CACHE_REFRESH_INTERVAL_MINUTES daqiqada " +
+        "DB bilan tenglashtiruvchi fon job'ining statistikasi.",
     });
   })
 );
@@ -123,7 +129,66 @@ router.post(
 
     logger.info(`Admin (${req.user.email}) cache-ni qayta yukladi: ${resource}`);
 
-    return sendSuccess(res, { reloaded: resource, counts: result }, { message: 'Cache qayta yuklandi' });
+    return sendSuccess(
+      res,
+      {
+        reloaded: resource,
+        counts: result,
+        // Qo'lda reload avtomatik job'ni BEKOR QILMAYDI — ikkalasi
+        // birga ishlaydi. Keyingi avtomatik yangilanish vaqti:
+        autoRefresh: getCacheRefreshStats(),
+      },
+      { message: 'Cache qayta yuklandi' }
+    );
+  })
+);
+
+/**
+ * POST /api/v1/system/cache-refresh-now — faqat ADMIN
+ * -------------------------------------------------------------
+ * `cache-reload` dan farqi nimada?
+ *
+ *   /cache-reload        -> warm-up'ni TO'G'RIDAN-TO'G'RI chaqiradi,
+ *                           bitta resursni ham yangilay oladi.
+ *   /cache-refresh-now   -> AVTOMATIK job'ning aynan o'zini qo'lda
+ *                           ishga tushiradi: "qulf" (bir vaqtda ikkita
+ *                           yangilanish bo'lmasligi) va statistika
+ *                           hisoblagichlari ham ishlaydi.
+ *
+ * Ya'ni bu endpoint "5 daqiqa kutmasdan, hozir yangila" tugmasi.
+ */
+router.post(
+  '/cache-refresh-now',
+  authenticate,
+  requireRole('ADMIN'),
+  asyncHandler(async (req, res) => {
+    // Navbatdagi DB yozuvlari tugasin, aks holda eski holatni yuklaymiz
+    await syncQueue.drain(10_000);
+
+    const result = await runCacheRefreshOnce('manual');
+
+    if (result.skipped) {
+      // Ayni damda boshqa yangilanish ketyapti — bu xato emas, holat
+      return sendSuccess(
+        res,
+        { refreshed: false, reason: 'BUSY', autoRefresh: getCacheRefreshStats() },
+        { message: "Yangilanish allaqachon ketmoqda — bu chaqiruv o'tkazib yuborildi" }
+      );
+    }
+
+    if (!result.ok) {
+      throw ApiError.serviceUnavailable(
+        `Cache yangilanmadi: ${result.error}. Eski cache saqlanib qoldi.`
+      );
+    }
+
+    logger.info(`Admin (${req.user.email}) cache'ni qo'lda majburiy yangiladi`);
+
+    return sendSuccess(
+      res,
+      { refreshed: true, counts: result.counts, autoRefresh: getCacheRefreshStats() },
+      { message: "Cache DB bilan tenglashtirildi" }
+    );
   })
 );
 

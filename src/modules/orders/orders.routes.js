@@ -26,7 +26,9 @@ router.use(authenticate);
 
 // --- Maxsus yo'llar (/:id dan oldin!) ---
 router.get('/stats', controller.stats);
-router.get('/my', validate({ query: schemas.listOrdersSchema }), controller.myOrders);
+// Ikkala yozuv ham ishlaydi: '/my' va '/my/list' (products moduli bilan bir xil).
+// Muhim: bu route '/:id' dan OLDIN turishi shart — aks holda id='my' deb o'qiladi.
+router.get(['/my', '/my/list'], validate({ query: schemas.listOrdersSchema }), controller.myOrders);
 
 // --- Umumiy ro'yxat (rol asosida filtrlanadi) ---
 router.get('/', validate({ query: schemas.listOrdersSchema }), controller.list);

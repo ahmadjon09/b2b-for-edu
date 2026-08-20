@@ -236,6 +236,7 @@ Xato bo'lsa → next(err) → errorHandler → toza JSON
 | `AUDIT_LOG_RETENTION_DAYS` | `7` | Loglar necha kun saqlansin |
 | `AUDIT_CLEANUP_INTERVAL_HOURS` | `24` | Tozalash qanchada bir ishlasin |
 | `CACHE_WARMUP_LIMIT` | `5000` | Start'da cache'ga max nechta yozuv |
+| `CACHE_REFRESH_INTERVAL_MINUTES` | `5` | Cache'ni DB bilan avtomatik tenglashtirish oralig'i (daqiqa). `0` — o'chirish |
 | `SYNC_MAX_RETRIES` | `3` | DB yozuvini necha marta qayta urinish |
 | `SYNC_RETRY_BASE_DELAY_MS` | `500` | Backoff boshlang'ich kutish |
 | `SEED_ADMIN_EMAIL` | `admin@b2b.uz` | Seed admin emaili |
@@ -274,7 +275,7 @@ Umumiy prefiks: **`/api/v1`**
 |---|---|---|
 | GET | `/products` | ochiq |
 | GET | `/products/:id` | ochiq |
-| GET | `/products/my/list` | SELLER |
+| GET | `/products/my` | SELLER |
 | POST | `/products` | SELLER, ADMIN |
 | PATCH | `/products/:id` | egasi, ADMIN |
 | DELETE | `/products/:id` | egasi, ADMIN |
@@ -313,6 +314,7 @@ Umumiy prefiks: **`/api/v1`**
 | GET | `/system/health` | ochiq |
 | GET | `/system/cache-stats` | ADMIN |
 | POST | `/system/cache-reload` | ADMIN |
+| POST | `/system/cache-refresh-now` | ADMIN |
 
 ---
 
@@ -403,6 +405,104 @@ Yozish:        1. RAM'ga yozamiz
 
 Xato bo'lsa: **3 marta** qayta uriniladi (500 → 1000 → 2000 ms backoff),
 baribir yiqilsa — cache **rollback** qilinadi va `DB_SYNC_FAILED` audit log yoziladi.
+
+#### Cache qachon yangilanadi? — uchta yo'l
+
+Bu loyihada cache **uch xil yo'l bilan** DB bilan tenglashib turadi. Ular
+bir-birini almashtirmaydi — **uchalasi bir vaqtda ishlaydi**.
+
+| # | Yo'l | Qachon ishlaydi | Kim ishga tushiradi |
+|---|---|---|---|
+| **A** | Hodisa asosida (event-driven) | Har `POST` / `PATCH` / `DELETE` da, **darhol** | Kodning o'zi (avtomatik) |
+| **B** | Qo'lda (manual) | ADMIN tugmani bosganda | Odam |
+| **C** | Davriy (scheduled) | Har **5 daqiqada** | Fon job'i (avtomatik) |
+
+**A — hodisa asosida.** Mahsulot yaratilsa `cache.products.set(...)`, o'zgarsa
+`update(...)`, o'chirilsa `delete(...)`. Bu eng tez va eng aniq yo'l: o'zgarish
+ro'y bergan zahoti cache to'g'ri bo'ladi. Kod: `src/modules/*/*.service.js`.
+
+**B — qo'lda.** Ikkita endpoint bor:
+
+```bash
+# Butun cache yoki bitta resursni DB'dan qayta yuklash
+curl -X POST http://localhost:3000/api/v1/system/cache-reload \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"resource":"products"}'      # yoki "all", "users", "categories", "orders"
+
+# Davriy job'ning AYNAN o'zini "hozir ishga tushir" (5 daqiqa kutmasdan)
+curl -X POST http://localhost:3000/api/v1/system/cache-refresh-now \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Ikkalasining farqi: `cache-reload` warm-up funksiyasini to'g'ridan-to'g'ri
+chaqiradi va **bitta resursni** ham yangilay oladi. `cache-refresh-now` esa
+davriy job'ni turtadi — uning **qulfi** (bir vaqtda ikkita yangilanish
+ketmasligi) va **statistika hisoblagichlari** ham ishlaydi.
+
+**C — davriy (har 5 daqiqada).** `src/jobs/cacheRefresh.job.js`. Server
+ishga tushganda yoqiladi va `setInterval` orqali har
+`CACHE_REFRESH_INTERVAL_MINUTES` daqiqada to'liq `warmUpCache()` qiladi.
+
+*Nega A yetarli emas, C ham kerak?* Chunki A faqat **shu server** orqali
+o'tgan o'zgarishlarni biladi. Cache DB'dan quyidagi hollarda "ajralib" qolishi
+mumkin:
+
+1. Kimdir DB'ga to'g'ridan-to'g'ri SQL yozsa (`psql`, DBeaver, migratsiya skripti).
+2. Boshqa servis yoki cron shu bazaga yozsa.
+3. `syncQueue` retry'dan keyin ham yiqilib, rollback qilsa — nozik holatlarda farq qolishi mumkin.
+4. Bir nechta nusxada (instance) ishlatilsa — biri yozadi, ikkinchisi bilmaydi.
+
+C ana shu "sekin oqib ketish"ni (*cache drift*) har 5 daqiqada tuzatib turadi —
+ya'ni **eng yomon holatda ma'lumot 5 daqiqagacha eskiradi**, undan ko'p emas.
+
+Job'ning holatini ko'rish:
+
+```bash
+curl http://localhost:3000/api/v1/system/cache-stats \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Javobdagi `autoRefresh` bo'limi:
+
+```json
+{
+  "enabled": true,
+  "intervalMinutes": 5,
+  "runCount": 12,
+  "successCount": 12,
+  "failureCount": 0,
+  "skippedCount": 0,
+  "lastRunAt": "2026-08-19T19:38:27.711Z",
+  "lastSuccessAt": "2026-08-19T19:38:27.719Z",
+  "lastDurationMs": 8,
+  "lastError": null,
+  "nextRunAt": "2026-08-19T19:43:27.719Z",
+  "isRunningNow": false
+}
+```
+
+Job'ning muhim xususiyatlari (kodni o'qiyotganda e'tibor bering):
+
+- **Hech qachon `throw` qilmaydi.** DB yiqilsa job xatoni yozib qo'yadi
+  (`failureCount++`, `lastError`) va eski cache **saqlanib qoladi** — API
+  ishlashda davom etadi. Fon job'idagi ishlanmagan xato butun Node
+  jarayonini o'ldirishi mumkin, shuning uchun bu juda muhim.
+- **Qulf (`isRunning`) bor.** Agar oldingi yangilanish hali tugamagan bo'lsa,
+  yangisi ishga tushmaydi — `skippedCount` oshadi. Bu DB sekin bo'lganda
+  yangilanishlarning ustma-ust tushib ketishini oldini oladi.
+- **`intervalHandle.unref()`** chaqirilgan — bu taymer Node'ning
+  o'chishiga to'sqinlik qilmaydi.
+- Graceful shutdown'da `stopCacheRefreshJob()` chaqiriladi.
+
+O'chirish uchun `.env` da `CACHE_REFRESH_INTERVAL_MINUTES=0` qiling — u holda
+A va B yo'llari ishlashda davom etadi, faqat davriy yangilanish o'chadi.
+
+> **Productionda bu qanday bo'lardi?** `setInterval` bitta jarayon uchun
+> yaxshi, lekin 3 ta nusxa ishlayotganda uchalasi ham bir vaqtda DB'ni
+> o'qiydi. To'g'ri yechim: **Redis Pub/Sub** (biri o'zgartirsa, qolganlariga
+> xabar beradi) yoki **node-cron / BullMQ repeatable job** (bitta "yetakchi"
+> nusxa bajaradi), yoki Kubernetes'da **CronJob**.
 
 #### Nega Redis emas?
 

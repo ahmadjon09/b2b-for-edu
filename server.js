@@ -9,7 +9,8 @@
  *   1) .env ni o'qish va tekshirish  (config/env.js ichida)
  *   2) DB ga ulanish                 (connectDatabase)
  *   3) Cache'ni DB'dan to'ldirish    (warmUpCache)
- *   4) Audit tozalash job'ini yoqish (startAuditCleanupJob)
+ *   4) Cache avtomatik yangilash job'i  (startCacheRefreshJob)
+ *   5) Audit tozalash job'ini yoqish (startAuditCleanupJob)
  *   5) HTTP portni ochish            (app.listen)
  *   6) Signal handler'larni ulash    (SIGINT / SIGTERM)
  *
@@ -37,6 +38,7 @@ const { connectDatabase, disconnectDatabase } = require('./src/config/db');
 const { warmUpCache } = require('./src/cache/warmup');
 const syncQueue = require('./src/cache/syncQueue');
 const { startAuditCleanupJob, stopAuditCleanupJob } = require('./src/jobs/auditCleanup.job');
+const { startCacheRefreshJob, stopCacheRefreshJob } = require('./src/jobs/cacheRefresh.job');
 const { registerProcessErrorHandlers } = require('./src/middlewares/errorHandler');
 
 /** Konsolga chiroyli "banner" chiqaramiz — foydalanuvchi nima ochishni bilsin */
@@ -79,10 +81,20 @@ async function bootstrap() {
       logger.error("Cache warm-up muvaffaqiyatsiz — server DB fallback rejimida ishlaydi", error);
     }
 
-    /* --- 3-qadam: Audit loglarni avtomatik tozalash job'i --- */
+    /* --- 3-qadam: Cache'ni avtomatik yangilab turuvchi job ---
+     * Cache uch xil yo'l bilan yangilanadi:
+     *   (a) CRUD hodisalarida  — darhol (service'lar ichida)
+     *   (b) ADMIN qo'lda       — POST /api/v1/system/cache-reload
+     *   (c) AVTOMATIK          — mana shu job, har
+     *       CACHE_REFRESH_INTERVAL_MINUTES daqiqada (default 5).
+     * Batafsil izoh: src/jobs/cacheRefresh.job.js
+     */
+    startCacheRefreshJob();
+
+    /* --- 4-qadam: Audit loglarni avtomatik tozalash job'i --- */
     startAuditCleanupJob();
 
-    /* --- 4-qadam: HTTP server --- */
+    /* --- 5-qadam: HTTP server --- */
     const port = env.PORT;
     const server = app.listen(port, '0.0.0.0', () => {
       printBanner(port);
@@ -102,7 +114,7 @@ async function bootstrap() {
     server.keepAliveTimeout = 65_000;
     server.headersTimeout = 70_000;
 
-    /* --- 5-qadam: Graceful shutdown va global xato handlerlari --- */
+    /* --- 6-qadam: Graceful shutdown va global xato handlerlari --- */
     registerProcessErrorHandlers({
       server,
       onShutdown: async () => {
@@ -113,7 +125,8 @@ async function bootstrap() {
           logger.warn("Navbat to'liq bo'shamadi — ba'zi yozuvlar yo'qolgan bo'lishi mumkin");
         }
 
-        // (b) Fon job'ini to'xtatamiz
+        // (b) Fon job'larini to'xtatamiz (yangi taymer ishga tushmasin)
+        stopCacheRefreshJob();
         stopAuditCleanupJob();
 
         // (c) DB ulanishini yopamiz
