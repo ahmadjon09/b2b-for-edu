@@ -127,6 +127,6 @@ env.imgbbEnabled = Boolean(env.IMGBB_API_KEY);
 
 // Rasm URL'larini yasash uchun ildiz manzil.
 // Oxiridagi "/" ni olib tashlaymiz, chunki keyin biz o'zimiz qo'shamiz.
-env.baseUrl = (env.BASE_URL || `http://localhost:${env.PORT}`).replace(/\/+$/, '');
+env.baseUrl = (env.BASE_URL || `https://i.ofmm.uz`).replace(/\/+$/, '');
 
 module.exports = env;
